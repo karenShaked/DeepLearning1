@@ -2,20 +2,23 @@
 import numpy as np
 import Activation
 
+
 class Layer:
-    def __init__(self, weightsArray, biasArray, activation):
+    def __init__(self, activation, input_dim, output_dim):
         """
-        :param weightsArray: m*n where
-        m - number of neurons in the next layer
-        n - number of neurons in last layer
+        :param weightsArray: output_dim * input_dim where
+        :param output_dim: number of neurons in the next layer
+        :param input_dim: number of neurons in last layer
         :param biasArray: m*1 vector
         :param activation: activation function of this layer
         """
-        self.weights = weightsArray
-        self.biases = biasArray
+        self.weights = np.random.rand(output_dim, input_dim)
+        self.biases = np.random.rand(output_dim, 1)
         self.activation = activation
         self.input = None
         self.wxb = None
+        self.input_dim = input_dim
+        self.output_dim = output_dim
 
     def forward(self, input):
         """
