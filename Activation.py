@@ -33,8 +33,8 @@ class Activation:
 
     @staticmethod
     def softmax(x):
-        exp_x = np.exp(x - np.max(x))  # Stability improvement by subtracting max from x
-        return exp_x / np.sum(exp_x, axis=0)
+        exp_x = np.exp(x - np.max(x, axis=1, keepdims=True))  # Stability improvement by subtracting max from x
+        return exp_x / np.sum(exp_x, axis=1, keepdims=True)
 
     @staticmethod
     def softmax_derivative(x):
