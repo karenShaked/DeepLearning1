@@ -1,9 +1,10 @@
 from enum import Enum
 import numpy as np
 from Activation import Activation
-from GradientTest import GradTest
+
 
 class LossFunctions(Enum):
+    # y_true and y_pred are the same dimensions -> (label_len, batch_size)
     LEAST_SQUARES = ("Least Squares", "Any",
                      lambda y_true, y_pred: np.mean(0.5 * (y_pred - y_true) ** 2),
                      lambda y_true, y_pred: (y_pred - y_true) / y_true.shape[1])
@@ -38,7 +39,6 @@ def get_loss_function(name):
 
 class Loss:
     def __init__(self, loss_name, activation_name, input_dim, label_dim):
-        self.loss_name = loss_name
         self.loss_function, self.loss_derivative = get_loss_function(loss_name)
         self.activation = Activation(activation_name)
         self.compatible_activation = self._get_compatible_activation(loss_name)
@@ -50,9 +50,13 @@ class Loss:
         self.Z = None
         self.output = None
         self.input = None
-        self.weights = np.random.rand(label_dim, input_dim)
-        self.biases = np.random.rand(1, label_dim)
+        self.weights = np.random.uniform(-0.5, 0.5, (label_dim, input_dim))
+        # self.weights = np.array([[0.5, 0.75, 1], [0.2, -0.1, 0.5]])
+        self.biases = np.random.uniform(-0.5, 0.5, (1, label_dim))
+        # self.biases = np.array([0, 2])
         self.batch_size = 1
+        self.loss_name = loss_name
+        self.activation_name = activation_name
 
     def _get_compatible_activation(self, loss_name):
         for loss in LossFunctions:
@@ -63,7 +67,8 @@ class Loss:
     def forward(self, X):
         self.batch_size = X.shape[1]
         self.input = np.transpose(X)
-        self.Z = np.dot(self.input, np.transpose(self.weights)) + np.tile(self.biases, (self.batch_size, 1))
+        xw_t = np.dot(self.input, np.transpose(self.weights))
+        self.Z = xw_t + np.tile(self.biases, (self.batch_size, 1))
         self.output = self.activation.apply(self.Z)
         return self.output
 
@@ -72,50 +77,54 @@ class Loss:
         loss = self.loss_function(y_true, self.output)
         return loss
 
-    def calculate_gradients(self, y_true):
+    def calculate_gradients(self, y_true, grad_test=False):
 
         if self.loss_name == "Cross Entropy" and self.compatible_activation == "softmax":
             # For softmax + cross-entropy, the gradient simplifies to (output - y_true)
             dZ = self.output - y_true
         else:
-            d_activation_output = self.loss_derivative(y_true, self.output)
-            dZ = self.activation.apply_derivative(self.Z) * d_activation_output
+            d_loss_output = self.loss_derivative(y_true, self.output)
+            d_activation_z = self.activation.apply_derivative(self.Z)
+            dZ = np.multiply(np.transpose(d_activation_z), d_loss_output)
+            # we want dZ to be in dimensions -> (label_len, batch_size)
 
+        # input dimensions -> (batch_size, input_features)
         dW = np.dot(dZ, self.input) / self.input.shape[0]
+        # dW dimensions -> (labels_len, input_features)
         db = np.mean(dZ, axis=1)
+        # db dimensions -> (labels_len, 1)
         d_theta = np.concatenate((dW.flatten(), db.flatten()))
         original_theta = np.concatenate((self.weights.flatten(), self.biases.flatten()))
         dX = np.dot(np.transpose(dZ), self.weights)
+        # dX dimensions -> (batch_size, input_features)
+        if grad_test:
+            self.grad_tests_w_x_b(dW, db, dX, y_true)
 
-        return dX, d_theta, original_theta
+        return np.transpose(dX), d_theta, original_theta
+
+    def split_theta_w_b(self, params_vector):
+        weights_num, biases_num = self.weights.size, self.biases.size
+        updated_weights = params_vector[:weights_num]
+        updated_biases = params_vector[weights_num:weights_num + biases_num]
+        remaining_params = params_vector[weights_num + biases_num:]
+        return updated_weights, updated_biases, remaining_params
 
     def update_theta(self, params_vector):
-        # Calculate the total number of weight and bias parameters for this layer
-        weights_num = self.weights.size
-        biases_num = self.biases.size
-
-        # Extract the relevant parameters for weights and biases from the top of params_vector
-        updated_weights = params_vector[:weights_num].reshape(self.weights.shape)
-        updated_biases = params_vector[weights_num:weights_num + biases_num].reshape(self.biases.shape)
-
-        # Update the weights and biases
-        self.weights = updated_weights
-        self.biases = updated_biases
-
-        # Return the remaining part of params_vector that was not used for updating this layer
-        remaining_params = params_vector[weights_num + biases_num:]
-
+        updated_weights, updated_biases, remaining_params = self.split_theta_w_b(params_vector)
+        self.weights = updated_weights.reshape(self.weights.shape)
+        self.biases = updated_biases.reshape(self.biases.shape)
         return remaining_params
 
-    def grad_tests_w_x_b(self, grad_w, grad_b, grad_x):
+    def grad_tests_w_x_b(self, grad_w, grad_b, grad_x, y_true):
+        from GradientTest import GradTest
         test_grad_w = GradTest(GradTest.func_by_loss_w(
-            self.loss_function, self.activation, self.input, self.biases),
+            self.loss_name, self.activation_name, self.input, self.biases, y_true),
                                self.label_dim, self.weights)
         test_grad_b = GradTest(GradTest.func_by_loss_b(
-            self.loss_function, self.activation, self.weights, self.input),
+            self.loss_name, self.activation_name, self.weights, self.input, y_true),
                                self.label_dim, self.biases)
         test_grad_x = GradTest(GradTest.func_by_loss_x(
-            self.loss_function, self.activation, self.weights, self.biases),
+            self.loss_name, self.activation_name, self.weights, self.biases),
                                self.label_dim, self.input)  # TODO :: check real dimension
         i = 10
         return test_grad_w.gradient_test(i, grad_w) \

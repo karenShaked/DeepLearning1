@@ -38,10 +38,10 @@ class Activation:
 
     @staticmethod
     def softmax_derivative(x):
-        # Softmax derivative is a bit more complex, typically handled in cross-entropy loss
-        # Here's a placeholder for individual usage; in practice, it's often not used directly
-        s = np.exp(x) / np.sum(np.exp(x), axis=0)
-        return s * (1 - s)  # Not the full Jacobian, simplified version
+        exp_x = np.exp(x - np.max(x, axis=1, keepdims=True))  # Stability improvement by subtracting max from x
+        s = exp_x / np.sum(exp_x, axis=1, keepdims=True)
+        d_softmax = (1-s)*s
+        return d_softmax
 
     @classmethod
     def _get_function_and_derivative(cls, name):
