@@ -5,22 +5,10 @@ import Loss
 
 
 class GradTest:
-    @staticmethod
-    def func_by_b(activation, weights, input_value):
-        return lambda b: activation.apply(np.dot(weights, input_value) + b)
 
-    @staticmethod
-    def func_by_w(activation, input_value, biases):
-        return lambda w: activation.apply(np.dot(w, input_value) + biases)
-
-    @staticmethod
-    def func_by_x(activation, weights, biases):
-        return lambda x: activation.apply(np.dot(weights, x) + biases)
-
-    @staticmethod
-    def func_by_loss_x(loss, activation, weights, biases):
-        func_x = GradTest.func_by_x(activation, weights, biases)
-        return lambda x: loss(func_x(x))
+    #  def func_by_loss_x(loss, activation, weights, biases):
+    #   func_x = GradTest.func_by_x(activation, weights, biases)
+    #    return lambda x: loss(func_x(x))
 
     @staticmethod
     def func_by_loss_w(loss_name, activation_name, input_value, biases, y_true):
@@ -47,11 +35,12 @@ class GradTest:
 
         return lambda b: loss(y_true, func_b_(b))
 
-    def __init__(self, func, dim, input_val):
+    def __init__(self, func, input_val):
         self.eps0 = 1
         self.eps_i = 0.5
         self.func = func
-        random_vec = np.random.rand(dim)
+        self.col, self.row = input_val.shape[0], input_val.shape[1]
+        random_vec = np.random.rand(self.col * self.row)
         norm = np.linalg.norm(random_vec)
         self.d_vec = random_vec / norm
         self.input = input_val
@@ -59,28 +48,34 @@ class GradTest:
     def gradient_test(self, iterations, grad_x):
         O_e = []
         O_e2 = []
+        grad_x = grad_x.flatten()
         for i in range(iterations):
             f_x = self.func(self.input)
-            x_eps_d = self.input + (self.eps0 * self.eps_i ** i) * self.d_vec
+            x_eps_d = self.input + (self.eps0 * self.eps_i ** i) * self.d_vec.reshape(self.col, self.row)
             f_x_eps_d = self.func(x_eps_d)
-            eps_d_transpose = self.eps0 * self.d_vec
+            eps_d_transpose = np.transpose((self.eps0 * self.eps_i ** i) * self.d_vec)
             O_e.append(abs(f_x - f_x_eps_d))
             O_e2.append(abs(f_x_eps_d - f_x - np.dot(eps_d_transpose, grad_x)))
         self._plot_grad(O_e, O_e2)
-        check_grad = self._check_grad(O_e, O_e2)
-        return check_grad
 
     def _plot_grad(self, O_e, O_e2):
-        x = np.arange(0, len(O_e), 0.01)
-        plt.plot(x, O_e, label='O(eps) Linear Decrease')
-        plt.plot(x, O_e2, label='O(eps^2) Quadratic Decrease')
+        indexes = range(1, len(O_e) + 1)
+
+        plt.figure(figsize=(10, 5))
+
+        plt.plot(indexes, O_e, marker='o', linestyle='-', color='blue', label='O_e1')
+        plt.plot(indexes, O_e2, marker='s', linestyle='-', color='red', label='O_e2')
+
+        plt.xlabel('Index')
+        plt.ylabel('Value')
+        plt.title('O_e1 and O_e2 Values by Index')
         plt.legend()
+        plt.grid(True)
         plt.show()
 
-    def _check_grad(self, O_e, O_e2):
-        is_linearly_decreasing = all(O_e[i] * 2 == O_e[i - 1] for i in range(1, len(O_e)))
-        is_quadratically_decreasing = all(O_e2[i] * 4 == O_e2[i - 1] for i in range(1, len(O_e2)))
-        return is_linearly_decreasing and is_quadratically_decreasing
-
+        # Print both values in 2 columns
+        print("Index\tO_e1\t\t\t\t\tO_e2")
+        for i, (val1, val2) in enumerate(zip(O_e, O_e2), 1):
+            print(f"{i}\t{val1}\t{val2}")
 
 
