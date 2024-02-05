@@ -3,7 +3,7 @@ from Activation import Activation
 from GradientTest import GradTest
 
 
-class Layer:
+class ResLayer:
     def __init__(self, activation_name, input_dim, output_dim):
         """
         :param output_dim: number of neurons in the next layer
@@ -12,7 +12,7 @@ class Layer:
         weights: (output_dim * input_dim) weights
         bias: (output_dim * 1) vector
         """
-        self.weights = np.random.uniform(-0.5, 0.5, (output_dim, input_dim))
+        self.weights_1 = np.random.uniform(-0.5, 0.5, (output_dim, input_dim))
         self.biases = np.random.uniform(-0.5, 0.5, (output_dim, 1))
         self.input = None
         self.batch_size = None
@@ -71,4 +71,14 @@ class Layer:
         return remaining_params
 
     def grad_tests_w_x_b(self, grad_w, grad_b, grad_x):
-        pass
+        test_grad_w = GradTest(GradTest.func_by_w(self.activation, self.input, self.biases),
+                               self.output_dim, self.weights)
+        test_grad_b = GradTest(GradTest.func_by_b(self.activation, self.weights, self.input),
+                               self.output_dim, self.biases)
+        test_grad_x = GradTest(GradTest.func_by_x(self.activation, self.weights, self.biases),
+                               self.input_dim * self.batch_size, self.input)
+        i = 10
+        return test_grad_w.gradient_test(i, grad_w) \
+            and test_grad_b.gradient_test(i, grad_b) \
+            and test_grad_x.gradient_test(i, grad_x)
+
