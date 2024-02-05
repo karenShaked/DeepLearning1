@@ -39,7 +39,7 @@ def main():
         #  labels = np.array([[1], [0], [0], [0]])  # [num of labels, num of data points]
 
         learning_rate = 0.01
-        grad_test = False
+        grad_test = True
         loss_arr, success_arr, index_arr = [], [], []
         for i in range(21):
             selected_data, selected_labels = first_model_softmax_regression.sgd_select_batch(input_data, data_labels)
@@ -56,3 +56,29 @@ def main():
 if __name__ == '__main__':
     main()
 
+"""   loss_data = []
+    success_precentage = []
+    for i in range(10):
+        selected_data, selected_labels = first_model_softmax_regression.sgd_select_batch(input_data, data_labels)
+        loss, y_pred = first_model_softmax_regression.train(1, selected_data, selected_labels)
+        loss_data.append(loss)
+        success_sum=0
+        for j in range(50):
+            subsample_train = y_pred[j]
+            subsample_test = selected_labels[: , j]
+            success = np.dot(subsample_train, subsample_test)
+            success_sum += success
+        success_precentage.append(success_sum / 50)
+        success_sum = 0
+
+    plt.plot(range(1, 11), loss_data)
+    plt.xlabel('')
+    plt.ylabel('loss')
+    plt.title('loss graph')
+    plt.show()
+
+    plt.plot(range(1, 11), success_precentage)
+    plt.xlabel('')
+    plt.ylabel('success')
+    plt.title('success rate')
+    plt.show()"""

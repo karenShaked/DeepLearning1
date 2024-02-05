@@ -36,17 +36,20 @@ class NeuralNetwork:
     def func_by_w(self, X, b, Y):
         return lambda w: np.sum((Y - softmax(np.dot(w, X) + b))**2)
 
+    def func_by_x(self, w, b, Y):
+        return lambda x: np.sum((Y - softmax(np.dot(w, x) + b))**2)
+
     def backward(self, X, Y, learning_rate):
         m = Y.shape[1]
         dZ2 = self.A2 - Y
         dW2 = (1 / m) * np.dot(dZ2, self.A1.T)
+        dX2 = np.dot(self.W2.T, dZ2)
         from GradientTest import GradTest
-        test_grad_w = GradTest(self.func_by_w(self.A1, self.b2, Y), self.W2)
+        test_grad_x = GradTest(self.func_by_x(self.W2, self.b2, Y), self.A1)
         i = 8
-        test_grad_w.gradient_test(i, dW2)
-
+        test_grad_x.gradient_test(i, dX2)
+        dZ1 = dX2 * relu_derivative(self.Z1)
         db2 = (1 / m) * np.sum(dZ2, axis=1, keepdims=True)
-        dZ1 = np.dot(self.W2.T, dZ2) * relu_derivative(self.Z1)
         dW1 = (1 / m) * np.dot(dZ1, X.T)
         db1 = (1 / m) * np.sum(dZ1, axis=1, keepdims=True)
 
@@ -76,8 +79,8 @@ if __name__ == "__main__":
     epochs = 4
     learning_rate = 1
 
-    X_train = np.random.randn(input_size, 200) # Example training data
-    Y_train = np.random.randn(output_size, 200) # Example training labels (not one-hot encoded for simplicity)
+    X_train = np.random.randn(input_size, 1) # Example training data
+    Y_train = np.random.randn(output_size, 1) # Example training labels (not one-hot encoded for simplicity)
 
     nn = NeuralNetwork(input_size, hidden_size, output_size)
     nn.train(X_train, Y_train, epochs, learning_rate)

@@ -6,7 +6,8 @@ from Loss import Loss
 
 class NeuralNetwork:
 
-    def __init__(self, data_dimension,  labels_len, layer_len, hidden_activation, loss_name, final_activation):
+    def __init__(self, data_dimension,  labels_len, layer_len, hidden_activation, loss_name, final_activation,
+                 ResNet=False):
         self.data_dimension = data_dimension
         self.labels_len = labels_len
         self.layer_len = layer_len
@@ -51,14 +52,14 @@ class NeuralNetwork:
         return all_theta_orig, all_theta_grad
 
     def train(self, learning_rate, data_matrix, y_true, grad_test):
-        output = self.feedforward(data_matrix)
-        success_percentage = self.success_percentage(y_true, output)
+        y_pred = self.feedforward(data_matrix)
+        success_percentage = self.success_percentage(y_true, y_pred)
         loss = self.loss_layer.get_loss(y_true)
         dx_loss, d_theta, original_theta_loss = self.loss_layer.calculate_gradients(y_true, grad_test)
         all_theta_old, all_theta_grad = self.backpropagation(d_theta, original_theta_loss, dx_loss, grad_test)
         theta_new = self.sgd_update_theta(learning_rate, all_theta_old, all_theta_grad)
         self.update_theta_layers(theta_new)
-        return success_percentage, loss
+        return success_percentage, loss, y_pred
 
     def sgd_update_theta(self, learning_rate, theta_old, theta_grad):
         theta_new = theta_old - learning_rate * theta_grad

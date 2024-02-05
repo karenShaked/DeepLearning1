@@ -5,10 +5,18 @@ import Loss
 
 
 class GradTest:
+    @staticmethod
+    def func_by_loss_x(loss_name, activation_name, input_value, biases, weights, y_true):
+        batch_size = input_value.shape[0]
+        activation = Activation(activation_name)
+        loss, loss_derive = Loss.get_loss_function(loss_name)
 
-    #  def func_by_loss_x(loss, activation, weights, biases):
-    #   func_x = GradTest.func_by_x(activation, weights, biases)
-    #    return lambda x: loss(func_x(x))
+        def func_x_(x):
+            Z = np.dot(x, np.transpose(weights)) + np.tile(biases, (batch_size, 1))
+            output = activation.apply(Z)
+            return np.transpose(output)
+
+        return lambda x: loss(y_true, func_x_(x))
 
     @staticmethod
     def func_by_loss_w(loss_name, activation_name, input_value, biases, y_true):
@@ -20,20 +28,8 @@ class GradTest:
             Z = np.dot(input_value, np.transpose(w)) + np.tile(biases, (batch_size, 1))
             output = activation.apply(Z)
             return np.transpose(output)
+
         return lambda w: loss(y_true, func_w_(w))
-
-    @staticmethod
-    def func_by_loss_b(loss_name, activation_name, input_value, weights, y_true):
-        batch_size = input_value.shape[0]
-        activation = Activation(activation_name)
-        loss, loss_derive = Loss.get_loss_function(loss_name)
-
-        def func_b_(b):
-            Z = np.dot(input_value, np.transpose(weights)) + np.tile(b, (batch_size, 1))
-            output = activation.apply(Z)
-            return np.transpose(output)
-
-        return lambda b: loss(y_true, func_b_(b))
 
     def __init__(self, func, input_val):
         self.eps0 = 1
@@ -54,8 +50,8 @@ class GradTest:
             x_eps_d = self.input + (self.eps0 * self.eps_i ** i) * self.d_vec.reshape(self.col, self.row)
             f_x_eps_d = self.func(x_eps_d)
             eps_d_transpose = np.transpose((self.eps0 * self.eps_i ** i) * self.d_vec)
-            O_e.append(abs(f_x - f_x_eps_d))
-            O_e2.append(abs(f_x_eps_d - f_x - np.dot(eps_d_transpose, grad_x)))
+            O_e.append(np.log(abs(f_x - f_x_eps_d)))
+            O_e2.append(np.log(abs(f_x_eps_d - f_x - np.dot(eps_d_transpose, grad_x))))
         self._plot_grad(O_e, O_e2)
 
     def _plot_grad(self, O_e, O_e2):
@@ -68,7 +64,7 @@ class GradTest:
 
         plt.xlabel('Index')
         plt.ylabel('Value')
-        plt.title('O_e1 and O_e2 Values by Index')
+        plt.title('O(eps) and O(eps^2) Values by Index')
         plt.legend()
         plt.grid(True)
         plt.show()

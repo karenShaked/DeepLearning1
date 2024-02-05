@@ -6,7 +6,7 @@ from Activation import Activation
 class LossFunctions(Enum):
     # y_true and y_pred are the same dimensions -> (label_len, batch_size)
     LEAST_SQUARES = ("Least Squares", "Any",
-                     lambda y_true, y_pred: np.mean((y_pred - y_true) ** 2),
+                     lambda y_true, y_pred: np.mean(0.5 * (y_pred - y_true) ** 2),
                      lambda y_true, y_pred: (y_pred - y_true) / y_true.shape[1])
     CROSS_ENTROPY = ("Cross Entropy", "softmax",
                      lambda y_true, y_pred: -np.mean(
@@ -98,8 +98,7 @@ class Loss:
         dX = np.dot(np.transpose(dZ), self.weights)
         # dX dimensions -> (batch_size, input_features)
         if grad_test:
-            self.grad_tests_w_x_b(dW, db, dX, y_true)
-
+            self.grad_tests_w_x_b(dW, dX, y_true)
         return np.transpose(dX), d_theta, original_theta
 
     def split_theta_w_b(self, params_vector):
@@ -115,19 +114,16 @@ class Loss:
         self.biases = updated_biases.reshape(self.biases.shape)
         return remaining_params
 
-    def grad_tests_w_x_b(self, grad_w, grad_b, grad_x, y_true):
+    def grad_tests_w_x_b(self, grad_w, grad_x, y_true):
         from GradientTest import GradTest
         test_grad_w = GradTest(GradTest.func_by_loss_w(
             self.loss_name, self.activation_name, self.input, self.biases, y_true),
                                 self.weights)
-        test_grad_b = GradTest(GradTest.func_by_loss_b(
-            self.loss_name, self.activation_name, self.weights, self.input, y_true),
-                                self.biases)
-        """test_grad_x = GradTest(GradTest.func_by_loss_x(
-            self.loss_name, self.activation_name, self.weights, self.biases),
-                               self.label_dim, self.input)  # TODO :: check real dimension"""
+        test_grad_x = GradTest(GradTest.func_by_loss_x(
+            self.loss_name, self.activation_name, self.input, self.biases, self.weights, y_true),
+                               self.input)
         i = 10
         test_grad_w.gradient_test(i, grad_w)
-        test_grad_b.gradient_test(i, grad_b)
+        test_grad_x.gradient_test(i, grad_x)
 
 
