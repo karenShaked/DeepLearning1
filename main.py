@@ -1,19 +1,18 @@
 from matplotlib import pyplot as plt
-
-from Layer import Layer
 import numpy as np
 import scipy.io
-from Activation import Activation
 from NeuralNetwork import NeuralNetwork
 
 
-def plot_success_loss(indexes, success_loss):
-    for name, value in success_loss.items():
+def plot_success_loss(indexes, success_loss_train, success_loss_test):
+    for (name_train, value_train), (name_test, value_test) in \
+            zip(success_loss_train.items(), success_loss_test.items()):
         plt.figure(figsize=(10, 5))
-        plt.plot(indexes, value, marker='s', linestyle='-', color='purple', label=f"{name}")
+        plt.plot(indexes, value_train, marker='s', linestyle='-', color='purple', label=f"train {name_train}")
+        plt.plot(indexes, value_test, marker='s', linestyle='-', color='red', label=f"test {name_test}")
         plt.xlabel('iterations')
-        plt.ylabel(f"{name} Values")
-        plt.title(f"{name} by iterations")
+        plt.ylabel(f"{name_train} Values")
+        plt.title(f"train vs test {name_train} by iterations")
         plt.legend()
         plt.grid(True)
         plt.show()
@@ -26,59 +25,67 @@ def main():
     for file_name in file_names:
         mat_data = scipy.io.loadmat(f'{folder_path}/{file_name}')
         train = 'Yt'
-        validation = 'Ct'
-        input_data = mat_data[train]
-        data_dim = input_data.shape[0]  # [input features, num of data points]
-        data_labels = mat_data[validation]
-        label_size = data_labels.shape[0]  # [num of labels, num of data points]
-        num_of_hidden_layers = 1
+        labels_train = 'Ct'
+        test = 'Yv'
+        labels_test = 'Cv'
+        input_train = mat_data[train]
+        input_test = mat_data[test]
+        data_dim = input_train.shape[0]  # [input features, num of data points]
+        train_labels = mat_data[labels_train]
+        test_labels = mat_data[labels_test]
+        label_size = train_labels.shape[0]  # [num of labels, num of data points]
+        num_of_hidden_layers = 0
         first_model_softmax_regression = NeuralNetwork(data_dim, label_size, num_of_hidden_layers, "sigmoid",
-                                                       "Cross Entropy", "softmax")
-        #  first_model_softmax_regression = NeuralNetwork(4, 4, 1, "sigmoid", "Least Squares", "softmax")
-        #  input_demo = np.array([[1], [2], [3], [1]])  # [input features, num of data points]
-        #  labels = np.array([[1], [0], [0], [0]])  # [num of labels, num of data points]
-
+                                                       "Least Squares", None)
         learning_rate = 0.01
-        grad_test = True
-        loss_arr, success_arr, index_arr = [], [], []
-        for i in range(21):
-            selected_data, selected_labels = first_model_softmax_regression.sgd_select_batch(input_data, data_labels)
-            success_percentage, loss = first_model_softmax_regression.train(learning_rate, selected_data, selected_labels,
-                                                                            grad_test)
+        grad_test = False
+        loss_train_arr, success_train_arr, loss_test_arr, success_test_arr, index_arr = [], [], [], [], []
+        for i in range(101):
+            selected_data, selected_labels = first_model_softmax_regression.sgd_select_batch(input_train, train_labels)
+            success_percentage_train, loss_train, y_pred = first_model_softmax_regression.train(learning_rate,
+                                                                                                selected_data,
+                                                                                                selected_labels,
+                                                                                                grad_test)
             if i % 4 == 0:
-                print(f"loss {i} - {loss} \nsuccess percentage:{success_percentage}")
-                loss_arr.append(loss)
-                success_arr.append(success_percentage)
+                print(f"train:\nloss {i} - {loss_train} \nsuccess percentage:{success_percentage_train}")
+                success_percentage_test, loss_test = first_model_softmax_regression.test(input_test, test_labels)
+                print(f"test:\nloss {i} - {loss_test} \nsuccess percentage:{success_percentage_test}\n\n")
+                loss_test_arr.append(loss_test)
+                success_test_arr.append(success_percentage_test)
+                loss_train_arr.append(loss_train)
+                success_train_arr.append(success_percentage_train)
                 index_arr.append(i)
-        plot_success_loss(index_arr, {"success percentage": success_arr, "loss": loss_arr})
+        plot_success_loss(index_arr, {"success percentage train": success_train_arr, "loss train": loss_train_arr},
+                          {"success percentage test": success_test_arr, "loss test": loss_test_arr})
 
+
+"""     loss_data = []
+        success_percentage = []
+        for i in range(10):
+            selected_data, selected_labels = first_model_softmax_regression.sgd_select_batch(input_train, train_labels)
+            loss, y_pred = first_model_softmax_regression.train(learning_rate, selected_data, selected_labels,
+                                                                grad_test)
+            loss_data.append(loss)
+            success_sum = 0
+            for j in range(50):
+                subsample_train = y_pred[j]
+                subsample_test = selected_labels[:, j]
+                success = np.dot(subsample_train, subsample_test)
+                success_sum += success
+            success_percentage.append(success_sum / 50)
+
+        plt.plot(range(1, 11), loss_data)
+        plt.xlabel('')
+        plt.ylabel('loss')
+        plt.title('loss graph')
+        plt.show()
+
+        plt.plot(range(1, 11), success_percentage)
+        plt.xlabel('')
+        plt.ylabel('success')
+        plt.title('success rate')
+        plt.show()
+"""
 
 if __name__ == '__main__':
     main()
-
-"""   loss_data = []
-    success_precentage = []
-    for i in range(10):
-        selected_data, selected_labels = first_model_softmax_regression.sgd_select_batch(input_data, data_labels)
-        loss, y_pred = first_model_softmax_regression.train(1, selected_data, selected_labels)
-        loss_data.append(loss)
-        success_sum=0
-        for j in range(50):
-            subsample_train = y_pred[j]
-            subsample_test = selected_labels[: , j]
-            success = np.dot(subsample_train, subsample_test)
-            success_sum += success
-        success_precentage.append(success_sum / 50)
-        success_sum = 0
-
-    plt.plot(range(1, 11), loss_data)
-    plt.xlabel('')
-    plt.ylabel('loss')
-    plt.title('loss graph')
-    plt.show()
-
-    plt.plot(range(1, 11), success_precentage)
-    plt.xlabel('')
-    plt.ylabel('success')
-    plt.title('success rate')
-    plt.show()"""

@@ -18,6 +18,7 @@ class Layer:
         self.batch_size = None
         self.input_dim = input_dim
         self.output_dim = output_dim
+        self.activation_name = activation_name
         self.activation = Activation(activation_name)
         self.calc_wxb = lambda x: (np.dot(self.weights, x) + self.biases)
         self.layer_func = lambda x: self.activation.apply(np.dot(self.weights, x) + self.biases)
@@ -37,7 +38,7 @@ class Layer:
         self.layer_result = self.layer_func(self.input)
         return self.layer_result
 
-    def backward(self, next_layers_gradient, grad_test=False):
+    def backward(self, next_layers_gradient, jac_test=False):
         """
         :param next_layers_gradient: (output_dim * batch_size) gradient from next layers
         :return: gradient of x of this layer - (input_dim * batch_size)
@@ -53,9 +54,17 @@ class Layer:
         grad_f_b = grad_f_b.sum(axis=1).reshape(-1, 1)
         grad_f_theta = np.concatenate((grad_f_w.flatten(), grad_f_b.flatten()), axis=0)
         original_theta = np.concatenate((self.weights.flatten(), self.biases.flatten()))
-        if grad_test:
-            self.grad_tests_w_x_b(grad_f_w, grad_f_b, grad_f_x_i)
+        if jac_test:
+            self.jac_tests_w_x(grad_f_w, grad_f_x_i)
         return grad_f_x_i, grad_f_theta, original_theta
+
+    def jac_tests_w_x(self, grad_w, grad_x):
+        from JacobianTest import JacTest
+        test_grad_w = JacTest(JacTest.func_by_w(self.activation_name, self.input, self.biases), self.weights)
+        test_grad_x = JacTest(JacTest.func_by_x(self.activation_name, self.weights, self.biases), self.input)
+        i = 10
+        test_grad_w.jacobian_test(i, grad_w)
+        test_grad_x.jacobian_test(i, grad_x)
 
     def split_theta_w_b(self, params_vector):
         weights_num, biases_num = self.weights.size, self.biases.size

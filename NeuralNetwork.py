@@ -61,6 +61,12 @@ class NeuralNetwork:
         self.update_theta_layers(theta_new)
         return success_percentage, loss, y_pred
 
+    def test(self, data_matrix, y_true):
+        y_pred = self.feedforward(data_matrix)
+        success_percentage = self.success_percentage(y_true, y_pred)
+        loss = self.loss_layer.get_loss(y_true)
+        return success_percentage, loss
+
     def sgd_update_theta(self, learning_rate, theta_old, theta_grad):
         theta_new = theta_old - learning_rate * theta_grad
         return theta_new
@@ -71,7 +77,7 @@ class NeuralNetwork:
             new_theta = self.layers[i].update_theta(new_theta)
 
     def sgd_select_batch(self, dataset, labels_set):
-        self.batch_size = len(dataset[0]) // 3
+        self.batch_size = len(dataset[0]) // 2
         random_indexes = sorted(np.random.choice(range(len(dataset[0])), self.batch_size, replace=False))
         selected_datasets = dataset[:, random_indexes]
         selected_labels = labels_set[:, random_indexes]

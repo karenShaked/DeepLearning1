@@ -1,43 +1,23 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from Activation import Activation
-import Loss
 
 
-class GradTest:
-    @staticmethod
-    def func_by_loss_x(loss_name, activation_name, input_value, biases, weights, y_true):
-        batch_size = input_value.shape[1]
-        activation = Activation(activation_name)
-        loss, loss_derive = Loss.get_loss_function(loss_name)
-
-        def func_x_(x):
-            xt_w = np.dot(np.transpose(x), weights)
-            z = xt_w + np.tile(biases, (batch_size, 1))
-            if loss_name == "Cross Entropy":
-                output = activation.apply(z)
-            else:
-                output = z
-            return output
-
-        return lambda x: loss(y_true, func_x_(x))
+class JacTest:
 
     @staticmethod
-    def func_by_loss_w(loss_name, activation_name, input_value, biases, y_true):
-        batch_size = input_value.shape[1]
+    def func_by_x(activation_name, weights, biases):
         activation = Activation(activation_name)
-        loss, loss_derive = Loss.get_loss_function(loss_name)
+        return lambda x: activation.apply(np.dot(weights, x) + biases)
 
-        def func_w_(w):
-            xt_w = np.dot(np.transpose(input_value), w)
-            z = xt_w + np.tile(biases, (batch_size, 1))
-            if loss_name == "Cross Entropy":
-                output = activation.apply(z)
-            else:
-                output = z
-            return output
+    @staticmethod
+    def func_by_w(activation_name, input_value, biases):
+        activation = Activation(activation_name)
+        return lambda w: activation.apply(np.dot(w, input_value) + biases)
 
-        return lambda w: loss(y_true, func_w_(w))
+    @staticmethod
+    def jac_m_v(jac_vec, v):
+        return np.multiply(jac_vec, v)
 
     def __init__(self, func, input_val):
         self.eps0 = 1
@@ -49,20 +29,19 @@ class GradTest:
         self.d_vec = random_vec / norm
         self.input = input_val
 
-    def gradient_test(self, iterations, grad_input):
+    def jacobian_test(self, iterations, jac_input):
         O_e = []
         O_e2 = []
-        grad_input = grad_input.flatten()
         for i in range(iterations):
             f_x = self.func(self.input)
             x_eps_d = self.input + (self.eps0 * self.eps_i ** i) * self.d_vec.reshape(self.col, self.row)
             f_x_eps_d = self.func(x_eps_d)
             eps_d_transpose = np.transpose((self.eps0 * self.eps_i ** i) * self.d_vec)
-            O_e.append(np.log(abs(f_x - f_x_eps_d)))
-            O_e2.append(np.log(abs(f_x_eps_d - f_x - np.dot(eps_d_transpose, grad_input))))
-        self.plot_grad(O_e, O_e2)
+            O_e.append(np.linalg.norm(f_x - f_x_eps_d))
+            O_e2.append(np.linalg.norm(f_x_eps_d - f_x - self.jac_m_v(jac_input, eps_d_transpose)))
+        self.plot_jac(O_e, O_e2)
 
-    def plot_grad(self, O_e, O_e2):
+    def plot_jac(self, O_e, O_e2):
         indexes = range(1, len(O_e) + 1)
 
         plt.figure(figsize=(10, 5))

@@ -4,36 +4,26 @@ from Activation import Activation
 
 
 class LossFunctions(Enum):
-    # y_true and y_pred are the same dimensions -> (label_len, batch_size)
-    LEAST_SQUARES = ("Least Squares", "Any",
-                     lambda y_true, y_pred: np.mean(0.5 * (y_pred - y_true) ** 2),
-                     lambda y_true, y_pred: (y_pred - y_true) / y_true.shape[1])
-    CROSS_ENTROPY = ("Cross Entropy", "softmax",
+    # y_true and y_pred are the same dimensions -> (batch_size, label_len)
+    LEAST_SQUARES = ("Least Squares",
+                     lambda y_true, y_pred: 0.5 * np.linalg.norm(y_pred - y_true)**2)
+    CROSS_ENTROPY = ("Cross Entropy",
                      lambda y_true, y_pred: -np.mean(
-                         y_true * np.log(y_pred + 1e-9) + (1 - y_true) * np.log(1 - y_pred + 1e-9)),
-                     lambda y_true, y_pred: -(y_true / y_pred - (1 - y_true) / (1 - y_pred)) / y_true.shape[1])
+                         y_true * np.log(y_pred + 1e-9) + (1 - y_true) * np.log(1 - y_pred + 1e-9)))
 
     @property
     def description(self):
         return self.value[0]
 
     @property
-    def compatible_activation(self):
-        return self.value[1]
-
-    @property
     def function(self):
-        return self.value[2]
-
-    @property
-    def derivative(self):
-        return self.value[3]
+        return self.value[1]
 
 
 def get_loss_function(name):
     for loss in LossFunctions:
         if loss.description == name:
-            return loss.function, loss.derivative
+            return loss.function
     raise ValueError(f"Loss function '{name}' not found.")
 
 
@@ -41,65 +31,74 @@ class Loss:
     def __init__(self, loss_name, activation_name, input_dim, label_dim):
         self.loss_function, self.loss_derivative = get_loss_function(loss_name)
         self.activation = Activation(activation_name)
-        self.compatible_activation = self._get_compatible_activation(loss_name)
         self.input_dim = input_dim
         self.label_dim = label_dim
-
-        if self.compatible_activation != "Any" and self.compatible_activation != activation_name:
-            raise ValueError(f"{loss_name} is not compatible with {activation_name} activation.")
         self.Z = None
         self.output = None
         self.input = None
-        self.weights = np.random.uniform(-0.5, 0.5, (label_dim, input_dim))
-        # self.weights = np.array([[0.5, 0.75, 1], [0.2, -0.1, 0.5]])
+        self.weights = np.random.uniform(-0.5, 0.5, (input_dim, label_dim))
         self.biases = np.random.uniform(-0.5, 0.5, (1, label_dim))
-        # self.biases = np.array([0, 2])
         self.batch_size = 1
         self.loss_name = loss_name
         self.activation_name = activation_name
 
-    def _get_compatible_activation(self, loss_name):
-        for loss in LossFunctions:
-            if loss.description == loss_name:
-                return loss.compatible_activation
-        raise ValueError(f"Loss function '{loss_name}' not found.")
-
-    def forward(self, X):
-        self.batch_size = X.shape[1]
-        self.input = np.transpose(X)
-        xw_t = np.dot(self.input, np.transpose(self.weights))
-        self.Z = xw_t + np.tile(self.biases, (self.batch_size, 1))
-        self.output = self.activation.apply(self.Z)
+    def forward(self, x):
+        """
+        input dims - (input_dim, batch_size)
+        w dims - (input_dim, labels_dim)
+        bias dims - (1, labels_dim)
+        """
+        self.batch_size = x.shape[1]
+        self.input = x
+        # input dims - (input_dim, batch_size)
+        xt_w = np.dot(np.transpose(self.input), self.weights)
+        # w dims - (input_dim, labels_dim)
+        # x.T @ w = (batch_size, input_dim) * (input_dim, labels_dim) = (batch_size, labels_dim)
+        self.Z = xt_w + np.tile(self.biases, (self.batch_size, 1))
+        # bias dims - (1, labels_dim)
+        # z = x.T @ w + b = (batch_size, labels_dim) + for each row add bias -> (batch_size, labels_dim)
+        if self.loss_name == "Cross Entropy":
+            self.output = self.activation.apply(self.Z)
+        if self.loss_name == "Least Squares":
+            self.output = self.Z
         return self.output
 
     def get_loss(self, y_true):
-        self.output = np.transpose(self.output)
+        y_true = np.transpose(y_true)
         loss = self.loss_function(y_true, self.output)
         return loss
 
     def calculate_gradients(self, y_true, grad_test=False):
-
-        if self.loss_name == "Cross Entropy" and self.compatible_activation == "softmax":
-            # For softmax + cross-entropy, the gradient simplifies to (output - y_true)
-            dZ = self.output - y_true
-        else:
-            d_loss_output = self.loss_derivative(y_true, self.output)
-            d_activation_z = self.activation.apply_derivative(self.Z)
-            dZ = np.multiply(np.transpose(d_activation_z), d_loss_output)
-            # we want dZ to be in dimensions -> (label_len, batch_size)
-
-        # input dimensions -> (batch_size, input_features)
-        dW = np.dot(dZ, self.input) / self.input.shape[0]
-        # dW dimensions -> (labels_len, input_features)
-        db = np.mean(dZ, axis=1)
-        # db dimensions -> (labels_len, 1)
-        d_theta = np.concatenate((dW.flatten(), db.flatten()))
+        """
+        input dims - (input_dim, batch_size)
+        w dims - (input_dim, labels_dim)
+        bias dims - (1, labels_dim)
+        """
+        y_true = np.transpose(y_true)
+        d_loss_out = (1/self.batch_size)*(self.output - y_true)
+        # d_loss_out = (output - y_true dims) -> (batch_size, labels_dim)
+        d_x = np.dot(self.weights, np.transpose(d_loss_out))
+        # w dims - (input_dim, labels_dim)
+        # d_x dims = (input_dim, labels_dim) * (labels_dim, batch_size) -> (input_dim, batch_size)
+        d_w = np.dot(self.input, d_loss_out)
+        # d_w dims = (input_dim, batch_size) * (batch_size, labels_dim) -> (input_dim, labels_dim)
+        d_b = np.sum(d_loss_out, axis=0)
+        # d_b dims = (batch_size, labels_dim) sum over columns -> (1, labels_dim)
+        d_theta = np.concatenate((d_w.flatten(), d_b.flatten()))
         original_theta = np.concatenate((self.weights.flatten(), self.biases.flatten()))
-        dX = np.dot(np.transpose(dZ), self.weights)
-        # dX dimensions -> (batch_size, input_features)
         if grad_test:
-            self.grad_tests_w_x_b(dW, dX, y_true)
-        return np.transpose(dX), d_theta, original_theta
+            self.grad_tests_w_x(d_w, d_x, y_true)
+        return d_x, d_theta, original_theta
+
+    def grad_tests_w_x(self, grad_w, grad_x, y_true):
+        from GradientTest import GradTest
+        test_grad_w = GradTest(GradTest.func_by_loss_w(
+            self.loss_name, self.activation_name, self.input, self.biases, y_true), self.weights)
+        test_grad_x = GradTest(GradTest.func_by_loss_x(
+            self.loss_name, self.activation_name, self.input, self.biases, self.weights, y_true), self.input)
+        i = 10
+        test_grad_w.gradient_test(i, grad_w)
+        test_grad_x.gradient_test(i, grad_x)
 
     def split_theta_w_b(self, params_vector):
         weights_num, biases_num = self.weights.size, self.biases.size
@@ -114,16 +113,6 @@ class Loss:
         self.biases = updated_biases.reshape(self.biases.shape)
         return remaining_params
 
-    def grad_tests_w_x_b(self, grad_w, grad_x, y_true):
-        from GradientTest import GradTest
-        test_grad_w = GradTest(GradTest.func_by_loss_w(
-            self.loss_name, self.activation_name, self.input, self.biases, y_true),
-                                self.weights)
-        test_grad_x = GradTest(GradTest.func_by_loss_x(
-            self.loss_name, self.activation_name, self.input, self.biases, self.weights, y_true),
-                               self.input)
-        i = 10
-        test_grad_w.gradient_test(i, grad_w)
-        test_grad_x.gradient_test(i, grad_x)
+
 
 
