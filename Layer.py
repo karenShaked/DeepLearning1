@@ -35,33 +35,53 @@ class Layer:
         self.input = input_matrix
         self.batch_size = input_matrix.shape[0]
         self.z = self.calc_wxb(self.input)
+        # w dims -> (output_dim, input_dim)
+        # x dims -> (input_dim, batch_size)
+        # b dims -> (output_dim, 1)
+        # z = wx+b ->(output_dim, batch_size)
         self.layer_result = self.layer_func(self.input)
+        # layer_result = activation(z) ->(output, batch_size)
         return self.layer_result
 
-    def backward(self, next_layers_gradient, jac_test=False):
-        """
-        :param next_layers_gradient: (output_dim * batch_size) gradient from next layers
-        :return: gradient of x of this layer - (input_dim * batch_size)
-                 gradient of theta of this layer
-                 grad_f_w - (batch_size * input_dim * output_dim) * 1
-                 grad_f_b - (batch_size * output_dim * 1) * 1
-                 grad_f_theta - (output_dim * ( 1 + input_dim)) * 1
-        """
-        layer_j = self.layer_func_derivative(self.z)
-        grad_f_b = np.multiply(layer_j, next_layers_gradient)
-        grad_f_w = np.dot(grad_f_b, np.transpose(self.input))
-        grad_f_x_i = np.dot(np.transpose(self.weights), grad_f_b)
-        grad_f_b = grad_f_b.sum(axis=1).reshape(-1, 1)
+    def backward(self, next_layers_gradient, jac_test):
+        activation_derivative = self.layer_func_derivative(self.z)
+        # activation_derivative = derivative_activation(z) ->(output_dim, batch_size)
+        grad_f = np.multiply(activation_derivative, next_layers_gradient)
+        # grad_f = layer_j * next_layers_gradient ->(output_dim, batch_size)
+        grad_f_w = np.dot(grad_f, np.transpose(self.input))
+        # grad_f_w = grad_f @ x.T ->(output_dim, batch_size)*(batch_size, input_dim)->(output_dim, input_dim)
+        grad_f_x_i = np.dot(np.transpose(self.weights), grad_f)
+        # grad_f_x_i = w.T @ grad_f ->(input_dim, output_dim)*(output, batch_size)->(input, batch_size)
+        grad_f_b = grad_f.sum(axis=1).reshape(-1, 1)
+        # grad_f_b = sum over columns(grad_f) ->(output, 1)
         grad_f_theta = np.concatenate((grad_f_w.flatten(), grad_f_b.flatten()), axis=0)
         original_theta = np.concatenate((self.weights.flatten(), self.biases.flatten()))
         if jac_test:
-            self.jac_tests_w_x(grad_f_w, grad_f_x_i)
+            # only for batch_size = 1
+            input_one_col = self.input[:, 0:1]
+            # input_one_col -> (input_dim, 1)
+            activation_derivative_one_col = activation_derivative[:, 0:1]
+            # activation_derivative_one_col -> (output_dim, 1)
+            jac_w = np.outer(activation_derivative_one_col, input_one_col)
+            # [[σ'(z1) * x1, σ'(z1) * x2,...],
+            # ....
+            # [σ'(zm) * x1,... ]]
+            # jac_w -> (output_dim, input_dim)
+            # the real jacobian doesn't look exactly like this (it is padded with many zeros),
+            # but we made the proper changes to make it right and improve performance
+            jac_x = np.multiply(self.weights, np.dot(activation_derivative_one_col, np.ones((1, self.input_dim))))
+            # [[σ'(z1) * w11, σ'(z1) * w12 ,...],
+            # ...
+            # [σ'(zm) * wm1, ... ]]
+            # jac_x -> (output_dim, input_dim)
+            self.jac_tests_w_x(jac_w, jac_x, input_one_col)
+
         return grad_f_x_i, grad_f_theta, original_theta
 
-    def jac_tests_w_x(self, grad_w, grad_x):
+    def jac_tests_w_x(self, grad_w, grad_x, input_x):
         from JacobianTest import JacTest
-        test_grad_w = JacTest(JacTest.func_by_w(self.activation_name, self.input, self.biases), self.weights)
-        test_grad_x = JacTest(JacTest.func_by_x(self.activation_name, self.weights, self.biases), self.input)
+        test_grad_w = JacTest(JacTest.func_by_w(self.activation_name, input_x, self.biases), self.weights, "w")
+        test_grad_x = JacTest(JacTest.func_by_x(self.activation_name, self.weights, self.biases), input_x, "x")
         i = 10
         test_grad_w.jacobian_test(i, grad_w)
         test_grad_x.jacobian_test(i, grad_x)
@@ -78,6 +98,3 @@ class Layer:
         self.weights = updated_weights.reshape(self.weights.shape)
         self.biases = updated_biases.reshape(self.biases.shape)
         return remaining_params
-
-    def grad_tests_w_x_b(self, grad_w, grad_b, grad_x):
-        pass

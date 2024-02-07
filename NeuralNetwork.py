@@ -15,7 +15,7 @@ class NeuralNetwork:
         input_dim = data_dimension
         output_dim = data_dimension
         for i in range(layer_len):
-            output_dim = data_dimension * 16
+            output_dim = data_dimension * 5
             self.layers.append(Layer(hidden_activation, input_dim, output_dim))
             input_dim = output_dim
         self.loss_layer = Loss(loss_name, final_activation, output_dim, labels_len)
@@ -40,26 +40,26 @@ class NeuralNetwork:
         success_percentage = (success_count / self.batch_size) * 100
         return success_percentage
 
-    def backpropagation(self, d_theta, original_theta_loss, dx_loss, grad_test):
+    def backpropagation(self, d_theta, original_theta_loss, dx_loss, jac_test):
         all_theta_grad = d_theta
         all_theta_orig = original_theta_loss
         next_layers_gradient = dx_loss
         for i in reversed(range(len(self.layers))):
             next_layers_gradient, theta_i_grad, original_theta_i =\
-                self.layers[i].backward(next_layers_gradient, grad_test)
+                self.layers[i].backward(next_layers_gradient, jac_test)
             all_theta_grad = np.concatenate((all_theta_grad, theta_i_grad), axis=0)
             all_theta_orig = np.concatenate((all_theta_orig, original_theta_i), axis=0)
         return all_theta_orig, all_theta_grad
 
-    def train(self, learning_rate, data_matrix, y_true, grad_test):
+    def train(self, learning_rate, data_matrix, y_true, grad_test, jac_test):
         y_pred = self.feedforward(data_matrix)
         success_percentage = self.success_percentage(y_true, y_pred)
         loss = self.loss_layer.get_loss(y_true)
         dx_loss, d_theta, original_theta_loss = self.loss_layer.calculate_gradients(y_true, grad_test)
-        all_theta_old, all_theta_grad = self.backpropagation(d_theta, original_theta_loss, dx_loss, grad_test)
+        all_theta_old, all_theta_grad = self.backpropagation(d_theta, original_theta_loss, dx_loss, jac_test)
         theta_new = self.sgd_update_theta(learning_rate, all_theta_old, all_theta_grad)
         self.update_theta_layers(theta_new)
-        return success_percentage, loss, y_pred
+        return success_percentage, loss
 
     def test(self, data_matrix, y_true):
         y_pred = self.feedforward(data_matrix)

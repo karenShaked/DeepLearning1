@@ -9,10 +9,8 @@ class ResLayer:
         :param mid_dim: number of neurons in the activation calculation
         :param input_output_dim: number of neurons in input and output
         :param activation_name: name of activation function of this layer
-        weights_1: (mid_dim * input_output_dim) weights
-        bias_1: (mid_dim * 1) vector
-        weights_2: (input_output_dim * mid_dim) weights
-        bias_2: (input_output_dim * 1) vector
+        weights: (mid_dim * input_output_dim) weights
+        bias: (mid_dim * 1) vector
         """
         self.weights_1 = np.random.uniform(-0.5, 0.5, (mid_dim, input_output_dim))
         self.weights_2 = np.random.uniform(-0.5, 0.5, (input_output_dim, mid_dim))

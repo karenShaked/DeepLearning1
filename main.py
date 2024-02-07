@@ -34,18 +34,20 @@ def main():
         train_labels = mat_data[labels_train]
         test_labels = mat_data[labels_test]
         label_size = train_labels.shape[0]  # [num of labels, num of data points]
-        num_of_hidden_layers = 0
+        num_of_hidden_layers = 1
         first_model_softmax_regression = NeuralNetwork(data_dim, label_size, num_of_hidden_layers, "sigmoid",
-                                                       "Least Squares", None)
+                                                       "Least Squares", "no_final_activation_in_least_squares")
         learning_rate = 0.01
         grad_test = False
+        jac_test = True
         loss_train_arr, success_train_arr, loss_test_arr, success_test_arr, index_arr = [], [], [], [], []
         for i in range(101):
             selected_data, selected_labels = first_model_softmax_regression.sgd_select_batch(input_train, train_labels)
-            success_percentage_train, loss_train, y_pred = first_model_softmax_regression.train(learning_rate,
-                                                                                                selected_data,
-                                                                                                selected_labels,
-                                                                                                grad_test)
+            success_percentage_train, loss_train = first_model_softmax_regression.train(learning_rate,
+                                                                                        selected_data,
+                                                                                        selected_labels,
+                                                                                        grad_test,
+                                                                                        jac_test)
             if i % 4 == 0:
                 print(f"train:\nloss {i} - {loss_train} \nsuccess percentage:{success_percentage_train}")
                 success_percentage_test, loss_test = first_model_softmax_regression.test(input_test, test_labels)

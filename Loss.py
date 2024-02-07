@@ -29,7 +29,7 @@ def get_loss_function(name):
 
 class Loss:
     def __init__(self, loss_name, activation_name, input_dim, label_dim):
-        self.loss_function, self.loss_derivative = get_loss_function(loss_name)
+        self.loss_function = get_loss_function(loss_name)
         self.activation = Activation(activation_name)
         self.input_dim = input_dim
         self.label_dim = label_dim

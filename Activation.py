@@ -48,7 +48,7 @@ class Activation:
         if hasattr(cls, name) and hasattr(cls, name + "_derivative"):
             return getattr(cls, name), getattr(cls, name + "_derivative")
         else:
-            raise ValueError(f"Activation function '{name}' or its derivative not found.")
+            return None, None
 
     def apply(self, x):
         return self.function(x)
