@@ -59,7 +59,7 @@ class NeuralNetwork:
         all_theta_old, all_theta_grad = self.backpropagation(d_theta, original_theta_loss, dx_loss, jac_test)
         theta_new = self.sgd_update_theta(learning_rate, all_theta_old, all_theta_grad)
         self.update_theta_layers(theta_new)
-        return success_percentage, loss
+        return success_percentage, loss, y_pred
 
     def test(self, data_matrix, y_true):
         y_pred = self.feedforward(data_matrix)

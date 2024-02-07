@@ -9,7 +9,7 @@ class GradTest:
     def func_by_loss_x(loss_name, activation_name, input_value, biases, weights, y_true):
         batch_size = input_value.shape[1]
         activation = Activation(activation_name)
-        loss, loss_derive = Loss.get_loss_function(loss_name)
+        loss = Loss.get_loss_function(loss_name)
 
         def func_x_(x):
             xt_w = np.dot(np.transpose(x), weights)
@@ -26,7 +26,7 @@ class GradTest:
     def func_by_loss_w(loss_name, activation_name, input_value, biases, y_true):
         batch_size = input_value.shape[1]
         activation = Activation(activation_name)
-        loss, loss_derive = Loss.get_loss_function(loss_name)
+        loss = Loss.get_loss_function(loss_name)
 
         def func_w_(w):
             xt_w = np.dot(np.transpose(input_value), w)

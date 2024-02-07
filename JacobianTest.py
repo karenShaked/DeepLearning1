@@ -15,6 +15,11 @@ class JacTest:
         activation = Activation(activation_name)
         return lambda w: activation.apply(np.dot(w, input_value) + biases)
 
+    @staticmethod
+    def func_by_b(activation_name, input_value, weights):
+        activation = Activation(activation_name)
+        return lambda b: activation.apply(np.dot(weights, input_value) + b)
+
     def __init__(self, func, input_val, val_name):
         self.val_name = val_name
         self.eps0 = 1
@@ -38,6 +43,11 @@ class JacTest:
             # v = d -> (output-dim, input_dim)
             # jac_val -> (output_dim, input_dim)
             result = np.sum(v * jac_val, axis=1).reshape(self.col, 1)
+        else:
+            # b -> (output-dim, 1)
+            # v = d -> (output-dim, 1)
+            # jac_val -> (output_dim, 1)
+            result = np.multiply(jac_val, v)
         return result
 
     def jacobian_test(self, iterations, jac_input):

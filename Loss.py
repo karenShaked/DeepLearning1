@@ -66,7 +66,7 @@ class Loss:
     def get_loss(self, y_true):
         y_true = np.transpose(y_true)
         loss = self.loss_function(y_true, self.output)
-        return loss
+        return loss / self.batch_size
 
     def calculate_gradients(self, y_true, grad_test=False):
         """
