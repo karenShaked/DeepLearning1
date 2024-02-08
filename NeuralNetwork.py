@@ -1,7 +1,9 @@
 from Layer import Layer
+from ResLayer import ResLayer
 import numpy as np
 import Activation
 from Loss import Loss
+from ResLoss import ResLoss
 
 
 class NeuralNetwork:
@@ -15,10 +17,16 @@ class NeuralNetwork:
         input_dim = data_dimension
         output_dim = data_dimension
         for i in range(layer_len):
-            output_dim = data_dimension * 5
-            self.layers.append(Layer(hidden_activation, input_dim, output_dim))
+            if ResNet:
+                self.layers.append(ResLayer(hidden_activation, input_dim))
+            else:
+                output_dim = data_dimension * 5
+                self.layers.append(Layer(hidden_activation, input_dim, output_dim))
             input_dim = output_dim
-        self.loss_layer = Loss(loss_name, final_activation, output_dim, labels_len)
+        if ResNet:
+            self.loss_layer = ResLoss(loss_name, final_activation, data_dimension)
+        else:
+            self.loss_layer = Loss(loss_name, final_activation, output_dim, labels_len)
         self.batch_size = None
 
     def feedforward(self, input_data):

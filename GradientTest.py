@@ -2,14 +2,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 from Activation import Activation
 import Loss
+import ResLoss
 
 
 class GradTest:
     @staticmethod
-    def func_by_loss_x(loss_name, activation_name, input_value, biases, weights, y_true):
+    def func_by_loss_x(loss_name, activation_name, input_value, biases, weights, y_true, ResNet=False):
         batch_size = input_value.shape[1]
         activation = Activation(activation_name)
-        loss = Loss.get_loss_function(loss_name)
+        if ResNet:
+            loss = ResLoss.get_loss_function(loss_name)
+        else:
+            loss = Loss.get_loss_function(loss_name)
 
         def func_x_(x):
             xt_w = np.dot(np.transpose(x), weights)
@@ -18,15 +22,20 @@ class GradTest:
                 output = activation.apply(z)
             else:
                 output = z
+            if ResNet:
+                output += np.transpose(x)
             return output
 
         return lambda x: loss(y_true, func_x_(x))
 
     @staticmethod
-    def func_by_loss_w(loss_name, activation_name, input_value, biases, y_true):
+    def func_by_loss_w(loss_name, activation_name, input_value, biases, y_true, ResNet=False):
         batch_size = input_value.shape[1]
         activation = Activation(activation_name)
-        loss = Loss.get_loss_function(loss_name)
+        if ResNet:
+            loss = ResLoss.get_loss_function(loss_name)
+        else:
+            loss = Loss.get_loss_function(loss_name)
 
         def func_w_(w):
             xt_w = np.dot(np.transpose(input_value), w)
@@ -35,6 +44,8 @@ class GradTest:
                 output = activation.apply(z)
             else:
                 output = z
+            if ResNet:
+                output += np.transpose(input_value)
             return output
 
         return lambda w: loss(y_true, func_w_(w))
