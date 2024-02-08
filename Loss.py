@@ -46,6 +46,7 @@ class Loss:
         """
         input dims - (input_dim, batch_size)
         w dims - (input_dim, labels_dim)
+        w dims - (input_dim, labels_dim)
         bias dims - (1, labels_dim)
         """
         self.batch_size = x.shape[1]
@@ -66,10 +67,12 @@ class Loss:
     def get_loss(self, y_true):
         y_true = np.transpose(y_true)
         loss = self.loss_function(y_true, self.output)
+        # output dims - (batch_size, labels_dim)
         return loss / self.batch_size
 
     def calculate_gradients(self, y_true, grad_test=False):
         """
+        output dims - (batch_size, labels_dim)
         input dims - (input_dim, batch_size)
         w dims - (input_dim, labels_dim)
         bias dims - (1, labels_dim)
@@ -93,9 +96,9 @@ class Loss:
     def grad_tests_w_x(self, grad_w, grad_x, y_true):
         from GradientTest import GradTest
         test_grad_w = GradTest(GradTest.func_by_loss_w(
-            self.loss_name, self.activation_name, self.input, self.biases, y_true), self.weights)
+            self.loss_name, self.activation_name, self.input, self.biases, y_true), self.weights, "W")
         test_grad_x = GradTest(GradTest.func_by_loss_x(
-            self.loss_name, self.activation_name, self.input, self.biases, self.weights, y_true), self.input)
+            self.loss_name, self.activation_name, self.input, self.biases, self.weights, y_true), self.input, "X")
         i = 10
         test_grad_w.gradient_test(i, grad_w)
         test_grad_x.gradient_test(i, grad_x)

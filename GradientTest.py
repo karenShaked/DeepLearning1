@@ -50,7 +50,7 @@ class GradTest:
 
         return lambda w: loss(y_true, func_w_(w))
 
-    def __init__(self, func, input_val):
+    def __init__(self, func, input_val, name_val):
         self.eps0 = 1
         self.eps_i = 0.5
         self.func = func
@@ -59,6 +59,7 @@ class GradTest:
         norm = np.linalg.norm(random_vec)
         self.d_vec = random_vec / norm
         self.input = input_val
+        self.name_val = name_val
 
     def gradient_test(self, iterations, grad_input):
         O_e = []
@@ -79,18 +80,13 @@ class GradTest:
         plt.figure(figsize=(10, 5))
 
         plt.plot(indexes, O_e, marker='o', linestyle='-', color='blue', label='O_e1')
-        plt.plot(indexes, O_e2, marker='s', linestyle='-', color='red', label='O_e2')
+        plt.plot(indexes, O_e2, marker='s', linestyle='--', color='red', label='O_e2')
 
         plt.xlabel('Index')
         plt.ylabel('Value')
-        plt.title('O(eps) and O(eps^2) Values by Index')
+        plt.title(f"Gradient Test - O(eps) and O(eps^2) of {self.name_val} Values by Index")
         plt.legend()
         plt.grid(True)
         plt.show()
-
-        # Print both values in 2 columns
-        print("Index\tO_e1\t\t\t\t\tO_e2")
-        for i, (val1, val2) in enumerate(zip(O_e, O_e2), 1):
-            print(f"{i}\t{val1}\t{val2}")
 
 
