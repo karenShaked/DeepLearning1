@@ -92,7 +92,7 @@ class NeuralNetwork:
             new_theta = self.layers[i].update_theta(new_theta)
 
     def sgd_select_batch(self, dataset, labels_set):
-        self.batch_size = len(dataset[0]) // 5
+        self.batch_size = len(dataset[0]) // 3
         random_indexes = sorted(np.random.choice(range(len(dataset[0])), self.batch_size, replace=False))
         selected_datasets = dataset[:, random_indexes]
         selected_labels = labels_set[:, random_indexes]

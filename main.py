@@ -47,6 +47,7 @@ def first_model_softmax_regression(selected_data, selected_labels, data_dim, lab
                                    learning_rate=0.1, grad_test=True, jac_test=False):
     basic_softmax_regression = NeuralNetwork(data_dim, label_size, num_of_hidden_layers, hidden_activation,
                                              loss, final_activation)
+    selected_data, selected_labels = basic_softmax_regression.sgd_select_batch(selected_data, selected_labels)
     basic_softmax_regression.train(learning_rate, selected_data, selected_labels, grad_test, jac_test)
 
 
@@ -126,7 +127,8 @@ def main():
         'PeaksData.mat'  # input dims =[ , ], labels_dims =[ , ]
     ]
     input_train, input_test, data_dim, labels_train, labels_test, label_size = extract_data(file_names[0], folder_name)
-    first_model_softmax_regression(input_train[:, 0], labels_train[:, 0], data_dim, label_size)
+    # first_model_softmax_regression(input_train[:, 0], labels_train[:, 0], data_dim, label_size)
+    first_model_softmax_regression(input_train, labels_train, data_dim, label_size)
     second_model_least_squares(input_train, labels_train, data_dim, label_size)
     third_model_softmax_sgd(input_train, labels_train, input_test, labels_test, data_dim, label_size)
     fourth_model_tanh_jac_one_layer(input_train[:, 0], labels_train[:, 0], data_dim, label_size)
