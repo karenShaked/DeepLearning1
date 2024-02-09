@@ -114,7 +114,7 @@ class GradTest:
         plt.plot(indexes, O_e2, marker='s', linestyle='--', color='red', label='O_e2')
 
         plt.xlabel('Index')
-        plt.ylabel('Value')
+        plt.ylabel('power of 2')
         plt.title(f"Gradient Test - O(eps) and O(eps^2) of {self.name_val} Values by Index")
         plt.legend()
         plt.grid(True)

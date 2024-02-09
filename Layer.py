@@ -81,8 +81,8 @@ class Layer:
 
     def jac_tests_w_x_b(self, jac_w, jac_x, jac_b, input_x):
         from JacobianTest import JacTest
-        test_jac_w = JacTest(JacTest.func_by_w(self.activation_name, input_x, self.biases), self.weights, "w")
-        test_jac_x = JacTest(JacTest.func_by_x(self.activation_name, self.weights, self.biases), input_x, "x")
+        test_jac_w = JacTest(JacTest.func_by_w(self.activation_name, input_x, self.biases), self.weights, "W")
+        test_jac_x = JacTest(JacTest.func_by_x(self.activation_name, self.weights, self.biases), input_x, "X")
         test_jac_b = JacTest(JacTest.func_by_b(self.activation_name, input_x, self.weights), self.biases, "b")
         i = 10
         test_jac_w.jacobian_test(i, jac_w)

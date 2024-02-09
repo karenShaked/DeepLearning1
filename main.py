@@ -12,15 +12,15 @@ def success_percentage_graph(success_percentage, index_arr):
     plt.show()
 
 
-def plot_success_loss(indexes, success_loss_train, success_loss_test):
+def plot_success_loss(indexes, success_loss_train, success_loss_test, graph_name, x_label):
     for (name_train, value_train), (name_test, value_test) in \
             zip(success_loss_train.items(), success_loss_test.items()):
         plt.figure(figsize=(10, 5))
-        plt.plot(indexes, value_train, marker='s', linestyle='-', color='purple', label=f"train {name_train}")
-        plt.plot(indexes, value_test, marker='s', linestyle='-', color='red', label=f"test {name_test}")
-        plt.xlabel('iterations')
+        plt.plot(indexes, value_train, marker='s', linestyle='-', color='purple', label=f"{name_train}")
+        plt.plot(indexes, value_test, marker='s', linestyle='-', color='red', label=f" {name_test}")
+        plt.xlabel(f"{x_label}")
         plt.ylabel(f"Values")
-        plt.title(f"{name_train} vs {name_test} by iterations")
+        plt.title(f"{graph_name}:\n {name_train} vs. {name_test}")
         plt.legend()
         plt.grid(True)
         plt.show()
@@ -96,7 +96,8 @@ def third_model_softmax_sgd(input_train, labels_train, input_test, labels_test, 
     success_percentage_graph(success_percentage_arr, index_arr)
     plot_success_loss(index_arr,
                       {"binary success percentage train": success_train_arr, "loss train": loss_train_arr},
-                      {"binary success percentage test": success_test_arr, "loss test": loss_test_arr})
+                      {"binary success percentage test": success_test_arr, "loss test": loss_test_arr},
+                      "Test vs. Train Performance Comparison by Number of Iterations", "iterations")
 
 
 # 2.2.1
@@ -126,28 +127,50 @@ def sixth_model_l_layers(input_data, labels, data_dim, label_size, num_of_hidden
     selected_data, selected_labels = l_layers_model.sgd_select_batch(input_data, labels)
     l_layers_model.train(learning_rate, selected_data, selected_labels, grad_test, jac_test)
 
-# 2.2.4
-def
 
-
+# 2.2.4 + 2.2.5
+def seventh_model_diff_l(input_train, labels_train, input_test, labels_test, data_dim, label_size,
+                         num_of_hidden_layers_arr, hidden_activation="ReLU", loss="Cross Entropy",
+                         final_activation="softmax", learning_rate=0.1, grad_test=False, jac_test=False):
+    success_train, success_test = [], []
+    loss_train_arr, loss_test_arr = [], []
+    sgd_iterations = 1000
+    success_percentage_train, loss_train = 0, 0
+    for num_hid_layers in num_of_hidden_layers_arr:
+        l_layers_model = NeuralNetwork(data_dim, label_size, num_hid_layers, hidden_activation, loss, final_activation)
+        for i in range(sgd_iterations):
+            selected_data, selected_labels = l_layers_model.sgd_select_batch(input_train, labels_train)
+            success_percentage_train, loss_train, y_pred = l_layers_model.train(learning_rate, selected_data,
+                                                                                selected_labels, grad_test, jac_test)
+        success_percentage_test, loss_test = l_layers_model.test(input_test, labels_test)
+        success_train.append(success_percentage_train)
+        success_test.append(success_percentage_test)
+        loss_train_arr.append(loss_train)
+        loss_test_arr.append(loss_test)
+    plot_success_loss(num_of_hidden_layers_arr,
+                      {"binary success percentage train": success_train, "loss train": loss_train_arr},
+                      {"binary success percentage test": success_test, "loss test": loss_test_arr},
+                      "Performance Comparison by Number of Hidden Layers", "num of hidden layers")
 
 def main():
     folder_name = 'HW1_Data'
     file_names = [
-        'GMMData.mat',  # input dims =[ , ], labels_dims =[ , ]
-        'SwissRollData.mat',  # input dims =[ , ], labels_dims =[ , ]
-        'PeaksData.mat'  # input dims =[ , ], labels_dims =[ , ]
+        'GMMData.mat',  # input dims =[5, batch], labels_dims =[5, batch]
+        'SwissRollData.mat',  # input dims =[2, batch], labels_dims =[2, batch]
+        'PeaksData.mat'  # input dims =[2, batch], labels_dims =[5 , batch]
     ]
     input_train, input_test, data_dim, labels_train, labels_test, label_size = extract_data(file_names[0], folder_name)
-    #first_model_softmax_regression(input_train, labels_train, data_dim, label_size)
-    #second_model_least_squares(input_train, labels_train, data_dim, label_size)
-    #third_model_softmax_sgd(input_train, labels_train, input_test, labels_test, data_dim, label_size)
-    #fourth_model_tanh_jac_one_layer(input_train[:, 0], labels_train[:, 0], data_dim, label_size)
-    #fifth_model_res_net_tanh_jac(input_train[:, 0], labels_train[:, 0], data_dim, label_size)
-    num_of_hidden_layers_L = 5
-    sixth_model_l_layers(input_train, labels_train, data_dim, label_size, num_of_hidden_layers_L)
-    L_arr = [0, 5, 10, 20]
-
+    first_model_softmax_regression(input_train, labels_train, data_dim, label_size)
+    second_model_least_squares(input_train, labels_train, data_dim, label_size)
+    third_model_softmax_sgd(input_train, labels_train, input_test, labels_test, data_dim, label_size)
+    fourth_model_tanh_jac_one_layer(input_train[:, 0], labels_train[:, 0], data_dim, label_size)
+    fifth_model_res_net_tanh_jac(input_train[:, 0], labels_train[:, 0], data_dim, label_size)
+    num_of_hidden_layers_l = 5
+    sixth_model_l_layers(input_train, labels_train, data_dim, label_size, num_of_hidden_layers_l)
+    l_arr = [0, 1, 2, 3, 4]
+    (input_train, labels_train, input_test, labels_test, data_dim, label_size, l_arr)
+    seventh_model_diff_l(input_train[:, 0:200], labels_train[:, 0:200], input_test, labels_test, data_dim, label_size,
+                         l_arr)
 
 
 if __name__ == '__main__':
