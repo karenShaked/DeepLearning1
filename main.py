@@ -12,6 +12,14 @@ def success_percentage_graph(success_percentage, index_arr):
     plt.show()
 
 
+def loss_graph(loss, index_arr):
+    plt.plot(index_arr, loss)
+    plt.xlabel('')
+    plt.ylabel('loss')
+    plt.title('loss by iteration')
+    plt.show()
+
+
 def plot_success_loss(indexes, success_loss_train, success_loss_test, graph_name, x_label):
     for (name_train, value_train), (name_test, value_test) in \
             zip(success_loss_train.items(), success_loss_test.items()):
@@ -58,8 +66,30 @@ def second_model_least_squares(input_data, labels, data_dim, label_size, num_of_
                                learning_rate=0.1, grad_test=False, jac_test=False):
     basic_least_squares = NeuralNetwork(data_dim, label_size, num_of_hidden_layers, hidden_activation, loss,
                                         final_activation)
-    selected_data, selected_labels = basic_least_squares.sgd_select_batch(input_data, labels)
-    basic_least_squares.train(learning_rate, selected_data, selected_labels, grad_test, jac_test)
+    index_arr, loss_arr = [], []
+    success_percentage_arr = []
+    success_sum = 0
+    least_squares_iter = 100
+    for i in range(least_squares_iter):
+        selected_data, selected_labels = basic_least_squares.sgd_select_batch(input_data, labels)
+        success_percentage, loss, y_pred = basic_least_squares.train(learning_rate, selected_data, selected_labels,
+                                                                     grad_test, jac_test)
+        sample_range = min(50, y_pred.shape[0])
+        for j in range(sample_range):
+            """
+            y_pred = (batch_size, labels)
+            selected_labels = (labels, batch_size)
+            """
+            subsample_train = y_pred[j]
+            subsample_test = selected_labels[:, j]
+            success = np.dot(subsample_train, subsample_test)
+            success_sum += success
+        success_percentage_arr.append(success_sum / sample_range)
+        success_sum = 0
+        loss_arr.append(loss)
+        index_arr.append(i)
+    success_percentage_graph(success_percentage_arr, index_arr)
+    loss_graph(loss_arr, index_arr)
 
 
 # 2.1.3
@@ -134,7 +164,7 @@ def seventh_model_diff_l(input_train, labels_train, input_test, labels_test, dat
                          final_activation="softmax", learning_rate=0.1, grad_test=False, jac_test=False):
     success_train, success_test = [], []
     loss_train_arr, loss_test_arr = [], []
-    sgd_iterations = 1000
+    sgd_iterations = 100
     success_percentage_train, loss_train = 0, 0
     for num_hid_layers in num_of_hidden_layers_arr:
         l_layers_model = NeuralNetwork(data_dim, label_size, num_hid_layers, hidden_activation, loss, final_activation)
@@ -152,6 +182,7 @@ def seventh_model_diff_l(input_train, labels_train, input_test, labels_test, dat
                       {"binary success percentage test": success_test, "loss test": loss_test_arr},
                       "Performance Comparison by Number of Hidden Layers", "num of hidden layers")
 
+
 def main():
     folder_name = 'HW1_Data'
     file_names = [
@@ -168,9 +199,10 @@ def main():
     num_of_hidden_layers_l = 5
     sixth_model_l_layers(input_train, labels_train, data_dim, label_size, num_of_hidden_layers_l)
     l_arr = [0, 1, 2, 3, 4]
-    (input_train, labels_train, input_test, labels_test, data_dim, label_size, l_arr)
-    seventh_model_diff_l(input_train[:, 0:200], labels_train[:, 0:200], input_test, labels_test, data_dim, label_size,
-                         l_arr)
+    seventh_model_diff_l(input_train, labels_train, input_test, labels_test, data_dim, label_size, l_arr)
+    random_indexes = sorted(np.random.choice(range(len(input_train[0])), 200, replace=False))
+    seventh_model_diff_l(input_train[:, random_indexes], labels_train[:, random_indexes], input_test, labels_test,
+                         data_dim, label_size, l_arr)
 
 
 if __name__ == '__main__':
