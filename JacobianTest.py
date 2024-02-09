@@ -74,9 +74,12 @@ class JacTest:
         plt.grid(True)
         plt.show()
 
+
+""" 
         # Print both values in 2 columns
         print("Index\tO_e1\t\t\t\t\tO_e2")
         for i, (val1, val2) in enumerate(zip(O_e, O_e2), 1):
             print(f"{i}\t{val1}\t{val2}")
+"""
 
 

@@ -27,7 +27,7 @@ class NeuralNetwork:
             self.loss_layer = ResLoss(loss_name, final_activation, data_dimension)
         else:
             self.loss_layer = Loss(loss_name, final_activation, output_dim, labels_len)
-        self.batch_size = None
+        self.batch_size = 1
 
     def feedforward(self, input_data):
         """
@@ -35,9 +35,14 @@ class NeuralNetwork:
         :return:
         """
         x_i = input_data
+
+        if x_i.ndim == 1:
+            x_i = x_i.reshape(-1, 1)
+
         for layer in self.layers:
             output = layer.forward(x_i)
             x_i = output
+
         output = self.loss_layer.forward(x_i)
         return output
 
@@ -60,6 +65,8 @@ class NeuralNetwork:
         return all_theta_orig, all_theta_grad
 
     def train(self, learning_rate, data_matrix, y_true, grad_test, jac_test):
+        if y_true.ndim == 1:
+            x_i = y_true.reshape(-1, 1)
         y_pred = self.feedforward(data_matrix)
         success_percentage = self.success_percentage(y_true, y_pred)
         loss = self.loss_layer.get_loss(y_true)
@@ -85,7 +92,7 @@ class NeuralNetwork:
             new_theta = self.layers[i].update_theta(new_theta)
 
     def sgd_select_batch(self, dataset, labels_set):
-        self.batch_size = len(dataset[0]) // 2
+        self.batch_size = len(dataset[0]) // 3
         random_indexes = sorted(np.random.choice(range(len(dataset[0])), self.batch_size, replace=False))
         selected_datasets = dataset[:, random_indexes]
         selected_labels = labels_set[:, random_indexes]
