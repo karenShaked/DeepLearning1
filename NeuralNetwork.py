@@ -47,6 +47,10 @@ class NeuralNetwork:
         return output
 
     def success_percentage(self, y_true, output):
+        """
+        :param y_true: (labels, batch_size)
+        :param output: (batch_size, labels)
+        """
         predicted_labels_arr = np.argmax(output, axis=1)
         true_labels_arr = np.argmax(y_true, axis=0)
         success_count = np.sum(predicted_labels_arr == true_labels_arr)
@@ -77,6 +81,11 @@ class NeuralNetwork:
         return success_percentage, loss, y_pred
 
     def test(self, data_matrix, y_true):
+        """
+        :param data_matrix: (input_features,batch_size)
+        :param y_true: (labels, batch_size)
+        """
+        self.batch_size = data_matrix.shape[1]
         y_pred = self.feedforward(data_matrix)
         success_percentage = self.success_percentage(y_true, y_pred)
         loss = self.loss_layer.get_loss(y_true)
