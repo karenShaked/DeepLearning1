@@ -75,11 +75,11 @@ class Layer:
             # [σ'(zm) * wm1, ... ]]
             # jac_x -> (output_dim, input_dim)
             jac_b = activation_derivative_one_col
-            self.jac_tests_w_x(jac_w, jac_x, jac_b, input_one_col)
+            self.jac_tests_w_x_b(jac_w, jac_x, jac_b, input_one_col)
 
         return grad_f_x_i, grad_f_theta, original_theta
 
-    def jac_tests_w_x(self, jac_w, jac_x, jac_b, input_x):
+    def jac_tests_w_x_b(self, jac_w, jac_x, jac_b, input_x):
         from JacobianTest import JacTest
         test_jac_w = JacTest(JacTest.func_by_w(self.activation_name, input_x, self.biases), self.weights, "w")
         test_jac_x = JacTest(JacTest.func_by_x(self.activation_name, self.weights, self.biases), input_x, "x")

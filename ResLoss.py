@@ -64,18 +64,22 @@ class ResLoss:
         d_theta = np.concatenate((d_w.flatten(), d_b.flatten()))
         original_theta = np.concatenate((self.weights.flatten(), self.biases.flatten()))
         if grad_test:
-            self.grad_tests_w_x(d_w, d_x, y_true)
+            self.grad_tests_w_x_b(d_w, d_x, d_b, y_true)
         return d_x, d_theta, original_theta
 
-    def grad_tests_w_x(self, grad_w, grad_x, y_true):
+    def grad_tests_w_x_b(self, grad_w, grad_x, grad_b, y_true):
         from GradientTest import GradTest
+        resnet = True
         test_grad_w = GradTest(GradTest.func_by_loss_w(
-            self.loss_name, self.activation_name, self.input, self.biases, y_true, True), self.weights, "W")
+            self.loss_name, self.activation_name, self.input, self.biases, y_true, resnet), self.weights, "W")
         test_grad_x = GradTest(GradTest.func_by_loss_x(
-            self.loss_name, self.activation_name, self.input, self.biases, self.weights, y_true, True), self.input, "X")
+            self.loss_name, self.activation_name, self.input, self.biases, self.weights, y_true, resnet), self.input, "X")
+        test_grad_b = GradTest(GradTest.func_by_loss_b(
+            self.loss_name, self.activation_name, self.input, self.weights, y_true, resnet), self.biases, "b")
         i = 10
         test_grad_w.gradient_test(i, grad_w)
         test_grad_x.gradient_test(i, grad_x)
+        test_grad_b.gradient_test(i, grad_b)
 
     def split_theta_w_b(self, params_vector):
         weights_num, biases_num = self.weights.size, self.biases.size

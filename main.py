@@ -68,27 +68,32 @@ def third_model_softmax_sgd(input_train, labels_train, input_test, labels_test, 
                             final_activation="softmax", learning_rate=0.1, grad_test=False, jac_test=False):
     sgd_softmax = NeuralNetwork(data_dim, label_size, num_of_hidden_layers, hidden_activation, loss, final_activation)
     loss_train_arr, success_train_arr, loss_test_arr, success_test_arr, index_arr = [], [], [], [], []
-    success_percentage = []
+    success_percentage_arr = []
     success_sum = 0
-    sgd_iter = 51
+    sgd_iter = 501
     for i in range(sgd_iter):
         selected_data, selected_labels = sgd_softmax.sgd_select_batch(input_train, labels_train)
         success_percentage_train, loss_train, y_pred = sgd_softmax.train(learning_rate, selected_data, selected_labels,
                                                                          grad_test, jac_test)
         sample_range = min(50, y_pred.shape[0])
         for j in range(sample_range):
+            """
+            y_pred = (batch_size, labels)
+            selected_labels = (labels, batch_size)
+            """
             subsample_train = y_pred[j]
             subsample_test = selected_labels[:, j]
             success = np.dot(subsample_train, subsample_test)
             success_sum += success
-        success_percentage.append(success_sum / sample_range)
+        success_percentage_arr.append(success_sum / sample_range)
+        success_sum = 0
         success_percentage_test, loss_test = sgd_softmax.test(input_test, labels_test)
         loss_test_arr.append(loss_test)
         success_test_arr.append(success_percentage_test)
         loss_train_arr.append(loss_train)
         success_train_arr.append(success_percentage_train)
         index_arr.append(i)
-    success_percentage_graph(success_percentage, index_arr)
+    success_percentage_graph(success_percentage_arr, index_arr)
     plot_success_loss(index_arr,
                       {"binary success percentage train": success_train_arr, "loss train": loss_train_arr},
                       {"binary success percentage test": success_test_arr, "loss test": loss_test_arr})
@@ -115,8 +120,15 @@ def fifth_model_res_net_tanh_jac(input_data, labels, data_dim, label_size, num_o
 # 2.2.3
 def sixth_model_l_layers(input_data, labels, data_dim, label_size, num_of_hidden_layers,
                          hidden_activation="tanh", loss="Cross Entropy", final_activation="softmax",
-                         learning_rate=0.1, grad_test=False, jac_test=True):
-    pass
+                         learning_rate=0.1, grad_test=True, jac_test=False):
+    l_layers_model = NeuralNetwork(data_dim, label_size, num_of_hidden_layers, hidden_activation, loss,
+                                   final_activation)
+    selected_data, selected_labels = l_layers_model.sgd_select_batch(input_data, labels)
+    l_layers_model.train(learning_rate, selected_data, selected_labels, grad_test, jac_test)
+
+# 2.2.4
+def
+
 
 
 def main():
@@ -127,13 +139,15 @@ def main():
         'PeaksData.mat'  # input dims =[ , ], labels_dims =[ , ]
     ]
     input_train, input_test, data_dim, labels_train, labels_test, label_size = extract_data(file_names[0], folder_name)
-    # first_model_softmax_regression(input_train[:, 0], labels_train[:, 0], data_dim, label_size)
-    first_model_softmax_regression(input_train, labels_train, data_dim, label_size)
-    second_model_least_squares(input_train, labels_train, data_dim, label_size)
-    third_model_softmax_sgd(input_train, labels_train, input_test, labels_test, data_dim, label_size)
-    fourth_model_tanh_jac_one_layer(input_train[:, 0], labels_train[:, 0], data_dim, label_size)
-    fifth_model_res_net_tanh_jac(input_train[:, 0], labels_train[:, 0], data_dim, label_size)
-    num_of_hidden_layers = 5
+    #first_model_softmax_regression(input_train, labels_train, data_dim, label_size)
+    #second_model_least_squares(input_train, labels_train, data_dim, label_size)
+    #third_model_softmax_sgd(input_train, labels_train, input_test, labels_test, data_dim, label_size)
+    #fourth_model_tanh_jac_one_layer(input_train[:, 0], labels_train[:, 0], data_dim, label_size)
+    #fifth_model_res_net_tanh_jac(input_train[:, 0], labels_train[:, 0], data_dim, label_size)
+    num_of_hidden_layers_L = 5
+    sixth_model_l_layers(input_train, labels_train, data_dim, label_size, num_of_hidden_layers_L)
+    L_arr = [0, 5, 10, 20]
+
 
 
 if __name__ == '__main__':

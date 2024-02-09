@@ -6,19 +6,28 @@ from Activation import Activation
 class JacTest:
 
     @staticmethod
-    def func_by_x(activation_name, weights, biases):
+    def func_by_x(activation_name, weights, biases, resnet=False):
         activation = Activation(activation_name)
-        return lambda x: activation.apply(np.dot(weights, x) + biases)
+        if resnet:
+            return lambda x: activation.apply(np.dot(weights, x) + biases) + x
+        else:
+            return lambda x: activation.apply(np.dot(weights, x) + biases)
 
     @staticmethod
-    def func_by_w(activation_name, input_value, biases):
+    def func_by_w(activation_name, input_value, biases, resnet=False):
         activation = Activation(activation_name)
-        return lambda w: activation.apply(np.dot(w, input_value) + biases)
+        if resnet:
+            return lambda w: activation.apply(np.dot(w, input_value) + biases) + input_value
+        else:
+            return lambda w: activation.apply(np.dot(w, input_value) + biases)
 
     @staticmethod
-    def func_by_b(activation_name, input_value, weights):
+    def func_by_b(activation_name, input_value, weights, resnet=False):
         activation = Activation(activation_name)
-        return lambda b: activation.apply(np.dot(weights, input_value) + b)
+        if resnet:
+            return lambda b: activation.apply(np.dot(weights, input_value) + b) + input_value
+        else:
+            return lambda b: activation.apply(np.dot(weights, input_value) + b)
 
     def __init__(self, func, input_val, val_name):
         self.val_name = val_name
@@ -33,12 +42,12 @@ class JacTest:
 
     def jac_m_v(self, jac_val, v):
         result = None
-        if self.val_name == "x":
+        if self.val_name == "X":
             # x -> (input_dim, 1)
             # v = d -> (input_dim, 1)
             # jac_val -> (output_dim, input_dim)
             result = np.dot(jac_val, v)
-        elif self.val_name == "w":
+        elif self.val_name == "W":
             # w -> (output-dim, input_dim)
             # v = d -> (output-dim, input_dim)
             # jac_val -> (output_dim, input_dim)

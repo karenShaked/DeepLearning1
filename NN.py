@@ -81,5 +81,6 @@ if __name__ == "__main__":
 
     X_train = np.random.randn(input_size, 1)  # Example training data
     Y_train = np.zeros((output_size, 1))  # Example training labels
+    Y_train[0] = 1
     nn = NeuralNetwork(input_size, hidden_size, output_size)
     nn.train(X_train, Y_train, epochs, learning_rate)

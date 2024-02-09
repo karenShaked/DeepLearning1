@@ -7,7 +7,35 @@ import ResLoss
 
 class GradTest:
     @staticmethod
+    def func_by_loss_b(loss_name, activation_name, input_value, weights, y_true, ResNet=False):
+        """
+        input dims - (input_dim, batch_size)
+        """
+        batch_size = input_value.shape[1]
+        activation = Activation(activation_name)
+        if ResNet:
+            loss = ResLoss.get_loss_function(loss_name)
+        else:
+            loss = Loss.get_loss_function(loss_name)
+
+        def func_b_(b):
+            xt_w = np.dot(np.transpose(input_value), weights)
+            z = xt_w + np.tile(b, (batch_size, 1))
+            if loss_name == "Cross Entropy":
+                output = activation.apply(z)
+            else:
+                output = z
+            if ResNet:
+                output += np.transpose(input_value)
+            return output
+
+        return lambda b: loss(y_true, func_b_(b))
+
+    @staticmethod
     def func_by_loss_x(loss_name, activation_name, input_value, biases, weights, y_true, ResNet=False):
+        """
+        input dims - (input_dim, batch_size)
+        """
         batch_size = input_value.shape[1]
         activation = Activation(activation_name)
         if ResNet:
@@ -30,6 +58,9 @@ class GradTest:
 
     @staticmethod
     def func_by_loss_w(loss_name, activation_name, input_value, biases, y_true, ResNet=False):
+        """
+        input dims - (input_dim, batch_size)
+        """
         batch_size = input_value.shape[1]
         activation = Activation(activation_name)
         if ResNet:
