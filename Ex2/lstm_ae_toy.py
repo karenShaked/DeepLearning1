@@ -4,6 +4,7 @@ import torch.optim as optim
 import random
 from main import create_synthetic_data
 
+
 # Define the LSTM Autoencoder
 class LSTMAutoencoder(nn.Module):
     def __init__(self, input_dim, hidden_dim, sequence_length):
