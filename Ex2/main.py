@@ -54,7 +54,8 @@ def create_synthetic_data():
     for data in synthetic_tensor:
         random_int = random.randint(20, 30)
         data[random_int - 5: random_int + 5] *= 0.1
-    print(synthetic_tensor.shape)  # [num_of_data_point, num_of_features_in_one]
+    synthetic_tensor = synthetic_tensor.unsqueeze(-1)  # Add a dimension for LSTM input
+    print(synthetic_tensor.shape)  # [num_of_data_point, sequence_len, features_dim]
     train_data = synthetic_tensor[:6000]  # First 6000 for training
     validation_data = synthetic_tensor[6000:8000]  # Next 2000 for validation
     test_data = synthetic_tensor[8000:]  # Last 2000 for testing
