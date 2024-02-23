@@ -2,7 +2,6 @@ import pandas as pd
 import torch
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, TensorDataset
-import matplotlib.pyplot as plt
 import random
 
 

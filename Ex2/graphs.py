@@ -2,13 +2,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_signal_vs_time(data_examples):
+def plot_signal_vs_time(data_examples, title):
+    # Shape data_examples [batch, sequence]
+    sub = data_examples.shape[0]
     # Plotting
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5), sharey=True)
+    fig, axes = plt.subplots(1, sub, figsize=(15, 5), sharey=True)
     time_steps = np.arange(50)
     for ax, example in zip(axes, data_examples):
         ax.plot(time_steps, example.numpy())
-        ax.set_title('Signal Value vs. Time')
+        ax.set_title(title)
         ax.set_xlabel('Time')
         ax.set_ylabel('Signal Value')
 
@@ -37,7 +39,7 @@ def plot(points):
     scatter = ax.scatter(x, y, z, c=values, cmap='viridis', s=100)
 
     # Color bar indicating the values
-    fig.colorbar(scatter, ax=ax, label='Values')
+    fig.colorbar(scatter, ax=ax, label='Loss')
 
     # Labels
     ax.set_xlabel('learning rate')
