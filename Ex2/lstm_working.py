@@ -1,4 +1,4 @@
-import math
+"""import math
 import random
 import torch
 import torch.nn as nn
@@ -13,7 +13,6 @@ def create_synthetic_data():
     for data in synthetic_tensor:
         random_int = random.randint(20, 30)
         data[random_int - 5: random_int + 6] *= 0.1
-    #synthetic_tensor = synthetic_tensor.unsqueeze(-1)  # Add a dimension for LSTM input
     print(synthetic_tensor.shape)  # [num_of_data_point, sequence_len, features_dim]
     train_data = synthetic_tensor[:6000]  # First 6000 for training
     validation_data = synthetic_tensor[6000:8000]  # Next 2000 for validation
@@ -22,9 +21,7 @@ def create_synthetic_data():
 
 
 def create_model(features_dim, hidden_units, sequence_len):
-    """
-    Create the LSTM Autoencoder model.
-    """
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = LSTMAutoencoder(features_dim, hidden_units, sequence_len, device)
     return model
@@ -199,7 +196,7 @@ for input_, output in zip(examples_inputs, examples_outputs):
     output = output.unsqueeze(0)  # Shape: [1(feature), sequence]
     in_out = torch.cat((input_, output), dim=0)  # Shape: [2, sequence]
     plot_signal_vs_time(in_out, 'Signal Value vs. Time \nInput vs.Output')
-"""
+
 # original signal and its reconstruction
 in_test, out_test = train_and_get_test_outputs(0.001, 1, 40, train, test, 20)
 # lr, grad_clip, hidden_units, train_data, test_data, epochs

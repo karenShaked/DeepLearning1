@@ -8,6 +8,14 @@ def get_data_loader(data, batch, shuffle=True):
     return data_loader
 
 
+def get_dims_copy_task(data):
+    # data Shape = [num_of_data_point, sequence_len, features_dim]
+    seq = data.shape[1]
+    input_features = data.shape[2]
+    output_features = input_features  # copy task
+    return seq, input_features, output_features
+
+
 class LSTM_model:
     def __init__(self, lr, in_features, hidden_units, out_features, sequence, num_layers, dropout, grad_clip=None):
         self.grad_clip = grad_clip

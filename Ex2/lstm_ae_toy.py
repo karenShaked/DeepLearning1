@@ -1,8 +1,8 @@
 import torch
 from create_data import create_synthetic_data
 import numpy as np
-from graphs import plot_grid_search, plot_signal_vs_time
-from lstm_ae_model import LSTM_model
+from graphs import plot_grid_search, plot_signal_vs_time, prepare_plot_in_vs_out
+from lstm_ae_model import LSTM_model, get_dims_copy_task
 
 NUM_LAYERS = 1
 DROPOUT = 0
@@ -10,16 +10,7 @@ EPOCHS = 100
 BATCH = 128
 
 
-def get_dims_copy_task(data):
-    # data Shape = [num_of_data_point, sequence_len, features_dim]
-    seq = data.shape[1]
-    input_features = data.shape[2]
-    output_features = input_features  # copy task
-    return seq, input_features, output_features
-
-
-def grid_search(lr_arr, grad_clip_arr, hidden_units_arr, train_data, validation_data, epochs, seq, input_features,
-                output_features):
+def grid_search(lr_arr, grad_clip_arr, hidden_units_arr, train_data, validation_data, seq, input_features, output_features):
     # train_data Shape = [num_of_data_point, sequence_len, features_dim] = [10000, 50, 1]
     # validation_data Shape = [num_of_data_point, sequence_len, features_dim] = [2000, 50, 1]
     min_loss, min_lr, min_gc, min_hidden, min_iter = float('inf'), -1, -1, -1, -1
@@ -42,18 +33,6 @@ def grid_search(lr_arr, grad_clip_arr, hidden_units_arr, train_data, validation_
     return min_loss, min_lr, min_gc, min_hidden, min_iter
 
 
-def prepare_plot_in_vs_out(in_test, out_test, sample_size):
-    examples_indexes = torch.randint(0, test.size(0), (sample_size,))
-    examples_inputs = in_test[examples_indexes].squeeze(-1)  # [num_of_examples, sequence]
-    examples_outputs = out_test[examples_indexes].squeeze(-1)  # [num_of_examples, sequence]
-
-    for input_, output_ in zip(examples_inputs, examples_outputs):
-        input_ = input_.unsqueeze(0)  # Shape: [1(feature), sequence]
-        output_ = output_.unsqueeze(0)  # Shape: [1(feature), sequence]
-        in_out = torch.cat((input_, output_), dim=0)  # Shape: [2, sequence]
-        plot_signal_vs_time(in_out, 'Signal Value vs. Time \nInput vs.Output')
-
-
 # Data
 train, validation, test = create_synthetic_data()  # [num_of_data_point, sequence_len, features_dim]
 
@@ -70,7 +49,7 @@ hidden_units_array = [8, 16, 32]
 
 sequence, in_features, out_features = get_dims_copy_task(test)
 
-loss, lr, gc, hidden_unit, epochs = grid_search(lr_array, grad_clip_array, hidden_units_array, train, validation, epochs=EPOCHS,
+loss, lr, gc, hidden_unit, epochs = grid_search(lr_array, grad_clip_array, hidden_units_array, train, validation,
                                                 seq=sequence, input_features=in_features, output_features=out_features)
 
 print(f'THE BEST MODEL PARAMS ARE :::::::::\n'
@@ -79,6 +58,10 @@ print(f'THE BEST MODEL PARAMS ARE :::::::::\n'
 
 # plot input vs. reconstruct
 best_model = LSTM_model(lr, in_features, hidden_unit, out_features, sequence, num_layers=NUM_LAYERS, dropout=DROPOUT, grad_clip=gc)
-best_model.train(train, epochs=epochs, batch=BATCH, validation=validation)
+
+# sequence, in_features, out_features = get_dims_copy_task(test)
+# best_model = LSTM_model(0.01, in_features, 32, out_features, sequence, num_layers=NUM_LAYERS, dropout=DROPOUT, grad_clip=1)
+
+best_model.train(train, EPOCHS, batch=BATCH, validation=validation)
 output = best_model.reconstruct(test)
 prepare_plot_in_vs_out(test, output, sample_size=3)
