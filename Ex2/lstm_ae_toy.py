@@ -1,145 +1,62 @@
 import torch
-import torch.nn as nn
-import torch.optim as optim
-from main import create_synthetic_data
-from torch.utils.data import DataLoader
+from create_data import create_synthetic_data
 import numpy as np
-from graphs import plot, plot_signal_vs_time
-from lstm_ae_architecture import LSTMAutoencoder
+from graphs import plot_grid_search, plot_signal_vs_time
+from lstm_ae_model import LSTM_model
+
+NUM_LAYERS = 1
+DROPOUT = 0
+EPOCHS = 100
+BATCH = 128
 
 
-def grid_search(lr_array, grad_clip_array, hidden_units_array, train_data, validation_data, epochs):
+def get_dims_copy_task(data):
+    # data Shape = [num_of_data_point, sequence_len, features_dim]
+    seq = data.shape[1]
+    input_features = data.shape[2]
+    output_features = input_features  # copy task
+    return seq, input_features, output_features
+
+
+def grid_search(lr_arr, grad_clip_arr, hidden_units_arr, train_data, validation_data, epochs, seq, input_features,
+                output_features):
+    # train_data Shape = [num_of_data_point, sequence_len, features_dim] = [10000, 50, 1]
+    # validation_data Shape = [num_of_data_point, sequence_len, features_dim] = [2000, 50, 1]
     min_loss, min_lr, min_gc, min_hidden, min_iter = float('inf'), -1, -1, -1, -1
     points = []
-    for lr in lr_array:
-        for grad_clip in grad_clip_array:
-            for hidden_units in hidden_units_array:
-                best_loss, best_iter = check_model(lr, grad_clip, hidden_units, train_data, validation_data, epochs)
-
-                # Save for plot the points
-                point = np.array([lr, grad_clip, hidden_units, best_loss])
+    for lr in lr_arr:
+        for grad_clip in grad_clip_arr:
+            for hidden_units in hidden_units_arr:
+                model = LSTM_model(lr, input_features, hidden_units, output_features, seq, num_layers=NUM_LAYERS,
+                                   dropout=DROPOUT, grad_clip=grad_clip)
+                train_loss, validation_loss = model.train(train_data, EPOCHS, BATCH, validation_data)
+                min_params_loss = min(validation_loss)
+                if min_loss > min_params_loss:
+                    min_loss, min_lr, min_gc, min_hidden, min_iter = min_params_loss, lr, grad_clip, hidden_units, np.argmin(validation_loss)
+                # Save the points for plot
+                point = np.array([lr, grad_clip, hidden_units, min_params_loss])
                 points.append(point)
 
-                print(f'Best loss: {best_loss:.4f} at lr: {lr:.4f}, grad_clip: {grad_clip:.4f}, '
-                      f'hidden_units: {hidden_units}')
-                print("================================")
-                if min_loss > best_loss:
-                    min_loss, min_lr, min_gc, min_hidden, min_iter = best_loss, lr, grad_clip, hidden_units, best_iter
     # plot the grid search:
-    plot(points)
+    plot_grid_search(points)
     return min_loss, min_lr, min_gc, min_hidden, min_iter
 
 
-def create_model(features_dim, hidden_units, sequence_len):
-    """
-    Create the LSTM Autoencoder model.
-    """
-    model = LSTMAutoencoder(features_dim, hidden_units, sequence_len)
-    return model
+def prepare_plot_in_vs_out(in_test, out_test, sample_size):
+    examples_indexes = torch.randint(0, test.size(0), (sample_size,))
+    examples_inputs = in_test[examples_indexes].squeeze(-1)  # [num_of_examples, sequence]
+    examples_outputs = out_test[examples_indexes].squeeze(-1)  # [num_of_examples, sequence]
 
-
-def get_data_loaders(train_data, validation_or_test_data):
-    shuffle = True
-    train_loader = DataLoader(train_data, batch_size=256, shuffle=shuffle)
-    validation_or_test_loader = DataLoader(validation_or_test_data, batch_size=256, shuffle=shuffle)
-    return train_loader, validation_or_test_loader
-
-
-def train_model(model, train_loader, criterion, optimizer):
-    model.train()
-    for batch in train_loader:
-        # Forward pass
-        outs = model(batch)
-        loss = criterion(outs, batch)
-
-        # Backward and optimize
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-
-def test_model(model, data_loader):
-    model.eval()
-    total_out = []
-    total_in = []
-    for batch in data_loader:
-        with torch.no_grad():
-            total_in.append(batch)
-            outs = model(batch)  # (batch, sequence, features)
-            total_out.append(outs)
-    return torch.cat(total_in, dim=0), torch.cat(total_out, dim=0)
-
-
-def evaluate_model(model, data_loader, criterion):
-    avg_loss = None
-    model.eval()
-    for batch in data_loader:
-        with torch.no_grad():
-            outs = model(batch)
-            loss = criterion(outs, batch)
-            if avg_loss is None:
-                avg_loss = loss.item()
-            else:
-                avg_loss = (loss.item() + avg_loss) / 2
-    return avg_loss
-
-
-def check_model(lr, grad_clip, hidden_units, train_data, validation_data, epochs):
-    """
-    Check the model's performance with given parameters
-    """
-    sequence_len = train_data.shape[1]
-    features_dim = train_data.shape[2]
-
-    # Model
-    model = create_model(features_dim, hidden_units, sequence_len)
-
-    # Loss and Optimizer
-    criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=grad_clip)
-
-    # Data loader by batches
-    train_loader, validation_loader = get_data_loaders(train_data, validation_data)
-
-    min_loss, min_epoch = float('inf'), -1
-
-    for epoch in range(epochs):
-        train_model(model, train_loader, criterion, optimizer)
-        avg_loss = evaluate_model(model, validation_loader, criterion)
-
-        if avg_loss < min_loss:
-            min_loss = avg_loss
-            min_epoch = epoch
-
-    return min_loss, min_epoch
-
-
-def train_and_get_test_outputs(lr, grad_clip, hidden_units, train_data, test_data, epochs):
-    # train_data Shape:  [num_of_data_point, sequence_len, features_dim] = [10000, 50, 1]
-    # test_data Shape: [num_of_data_point, sequence_len, features_dim] = [2000, 50, 1]
-
-    sequence_len = train_data.shape[1]
-    features_dim = train_data.shape[2]
-
-    # Model
-    model = create_model(features_dim, hidden_units, sequence_len)
-
-    # Loss and Optimizer
-    criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=grad_clip)
-
-    # Data loader by batches
-    train_loader, test_loader = get_data_loaders(train_data, test_data)
-    for epoch in range(epochs):
-        train_model(model, train_loader, criterion, optimizer)
-    input_test, outs_test = test_model(model, test_loader)
-    return input_test, outs_test
+    for input_, output_ in zip(examples_inputs, examples_outputs):
+        input_ = input_.unsqueeze(0)  # Shape: [1(feature), sequence]
+        output_ = output_.unsqueeze(0)  # Shape: [1(feature), sequence]
+        in_out = torch.cat((input_, output_), dim=0)  # Shape: [2, sequence]
+        plot_signal_vs_time(in_out, 'Signal Value vs. Time \nInput vs.Output')
 
 
 # Data
 train, validation, test = create_synthetic_data()  # [num_of_data_point, sequence_len, features_dim]
-examples = train[torch.randint(0, train.size(0), (3,))]
-"""
+
 # Select three examples from the synthetic dataset
 examples = train[torch.randint(0, train.size(0), (3,))].squeeze(-1)  # [3, 50]
 
@@ -151,20 +68,17 @@ lr_array = [0.001, 0.01, 0.1]
 grad_clip_array = [1.0, 5.0, 10.0]
 hidden_units_array = [8, 16, 32]
 
-loss, lr, gc, hidden_unit, iter_num = grid_search(lr_array, grad_clip_array, hidden_units_array, train, validation, 20)
-print(f'AND THE WINNER IS:::::::::\nBest loss: {loss:.4f} at lr: {lr:.4f}, grad_clip: {gc:.4f},'
-      f' hidden_units: {hidden_unit}')
-"""
-# original signal and its reconstruction
-in_test, out_test = train_and_get_test_outputs(0.001, 1, 50, train, test, 20)
-# lr, grad_clip, hidden_units, train_data, test_data, epochs
-# Select three examples from the test and there outputs
-examples_indexes = torch.randint(0, test.size(0), (3,))
-examples_inputs = in_test[examples_indexes].squeeze(-1)   # [num_of_examples, sequence]
-examples_outputs = out_test[examples_indexes].squeeze(-1)  # [num_of_examples, sequence]
+sequence, in_features, out_features = get_dims_copy_task(test)
 
-for input_, output in zip(examples_inputs, examples_outputs):
-    input_ = input_.unsqueeze(0)  # Shape: [1(feature), sequence]
-    output = output.unsqueeze(0)  # Shape: [1(feature), sequence]
-    in_out = torch.cat((input_, output), dim=0)  # Shape: [2, sequence]
-    plot_signal_vs_time(in_out, 'Signal Value vs. Time \nInput vs.Output')
+loss, lr, gc, hidden_unit, epochs = grid_search(lr_array, grad_clip_array, hidden_units_array, train, validation, epochs=EPOCHS,
+                                                seq=sequence, input_features=in_features, output_features=out_features)
+
+print(f'THE BEST MODEL PARAMS ARE :::::::::\n'
+      f'Best loss: {loss:.4f} at lr: {lr:.4f}, grad_clip: {gc:.4f}, hidden_units: {hidden_unit}')
+
+
+# plot input vs. reconstruct
+best_model = LSTM_model(lr, in_features, hidden_unit, out_features, sequence, num_layers=NUM_LAYERS, dropout=DROPOUT, grad_clip=gc)
+best_model.train(train, epochs=epochs, batch=BATCH, validation=validation)
+output = best_model.reconstruct(test)
+prepare_plot_in_vs_out(test, output, sample_size=3)

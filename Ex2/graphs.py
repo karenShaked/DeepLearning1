@@ -2,23 +2,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_signal_vs_time(data_examples, title):
-    # Shape data_examples [batch, sequence]
+def plot_signal_vs_time(data_examples, title, time='Time', signal='Signal Value'):
+    # Shape data_examples [num_of_examples, sequence_length]
     sub = data_examples.shape[0]
     # Plotting
     fig, axes = plt.subplots(1, sub, figsize=(15, 5), sharey=True)
     time_steps = np.arange(50)
     for ax, example in zip(axes, data_examples):
-        ax.plot(time_steps, example.numpy())
-        ax.set_title(title)
-        ax.set_xlabel('Time')
-        ax.set_ylabel('Signal Value')
-
+        ax.plot(time_steps, example.detach().numpy())
+        ax.set_xlabel(time)
+        ax.set_ylabel(signal)
+    fig.suptitle(title)
     plt.tight_layout()
     plt.show()
 
 
-def plot(points):
+def plot_grid_search(points):
     """
     :param points: each point -> [lr, grad_clip, hidden_units, best_loss]
     """
