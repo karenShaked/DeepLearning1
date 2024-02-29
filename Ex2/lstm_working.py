@@ -1,122 +1,82 @@
-"""import math
-import random
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader
 import numpy as np
-from graphs import plot_signal_vs_time
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
+import SNP_data
+import torch
 from lstm_ae_architecture import LSTMAutoencoder as AE
-
-def create_synthetic_data():
-    synthetic_tensor = torch.rand(10000, 50, 1)
-    for data in synthetic_tensor:
-        random_int = random.randint(20, 30)
-        data[random_int - 5: random_int + 6] *= 0.1
-    print(synthetic_tensor.shape)  # [num_of_data_point, sequence_len, features_dim]
-    train_data = synthetic_tensor[:6000]  # First 6000 for training
-    validation_data = synthetic_tensor[6000:8000]  # Next 2000 for validation
-    test_data = synthetic_tensor[8000:]  # Last 2000 for testing
-    return train_data, validation_data, test_data
+from SNP_Lstm import LSTM_AEP as AEP
+from torch.utils.data import DataLoader
 
 
-def create_model(features_dim, hidden_units, sequence_len):
+batch = 8
+epochs = 100
+optimizer = torch.optim.Adam
+hidden_state_sz = 50
+num_layers = 1
+lr = 0.001
+input_sz = 1
+dropout = 0
+seq_sz = 53
+output_sz = 1
+grad_clip = 1
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = LSTMAutoencoder(features_dim, hidden_units, sequence_len, device)
-    return model
+data_dict = SNP_data.split_data(SNP_data.parse())
+train_loader = torch.utils.data.DataLoader(data_dict['train_set'], batch_size=batch, shuffle=True)
+test_loader = torch.utils.data.DataLoader(data_dict['test_set'], batch_size=len(data_dict['test_set']), shuffle=False)
 
-
-def get_data_loaders(train_data, validation_or_test_data):
-    shuffle = True
-    train_loader = DataLoader(train_data, batch_size=256, shuffle=shuffle)
-    validation_or_test_loader = DataLoader(validation_or_test_data, batch_size=256, shuffle=shuffle)
-    return train_loader, validation_or_test_loader
-
-
-def train_model(model, train_loader, criterion, optimizer, grad_clip=None):
-    model.train()
-    for batch in train_loader:
-        optimizer.zero_grad()
-        outs = model(batch)
-        loss = criterion(outs, batch)
-        loss.backward()
-        if grad_clip is not None:
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=grad_clip)
-        optimizer.step()
+torch.cuda.empty_cache()
 
 
-def test_model(model, data_loader):
-    model.eval()
-    total_out = []
-    total_in = []
-    for batch in data_loader:
-        with torch.no_grad():
-            total_in.append(batch)
-            outs = model(batch)  # (batch, sequence, features)
-            total_out.append(outs)
-    return torch.cat(total_in, dim=0), torch.cat(total_out, dim=0)
+def daily_stock_AMZN_GOOGL():
+    stocks = SNP_data.parse()
+    AMZN_stocks = stocks[stocks['symbol'] == 'AMZN'][['date', 'high']]
+    GOOGL_stocks = stocks[stocks['symbol'] == 'GOOGL'][['date', 'high']]
+
+    fig, axes = plt.subplots()
+    axes.xaxis.set_major_locator(MaxNLocator(5))
+    plt.plot(AMZN_stocks['date'], AMZN_stocks['high'], label="AMZN stock")
+    plt.plot(GOOGL_stocks['date'], GOOGL_stocks['high'], label="GOOGL stock")
+    plt.title("GOOGL vs AMZN stock")
+    plt.legend()
+    plt.show()
 
 
-def train_and_get_test_outputs(lr, grad_clip, hidden_units, train_data, test_data, epochs):
-    # train_data Shape:  [num_of_data_point, sequence_len, features_dim] = [10000, 50, 1]
-    # test_data Shape: [num_of_data_point, sequence_len, features_dim] = [2000, 50, 1]
-
-    sequence_len = train_data.shape[1]
-    features_dim = train_data.shape[2]
-
-    # Model
-    model = create_model(features_dim, hidden_units, sequence_len)
-
-    # Loss and Optimizer
-    criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=grad_clip)
-
-    # Data loader by batches
-    train_loader, test_loader = get_data_loaders(train_data, test_data)
-    for epoch in range(epochs):
-        train_model(model, train_loader, criterion, optimizer)
-    input_test, outs_test = test_model(model, test_loader)
-    return input_test, outs_test
-
-
-class AE_TOY:
+class AE_SNP500:
     def __init__(self):
-        self.train_data = train
-        self.validation_data = validation
-        self.test_data = test
-        self.lr = 0.001
-        self.batch = 100
-        self.epochs = 200
-        self.hidden_state_sz = 30
-        self.input_sz = 1
-        self.seq_sz = 50
-        self.output_sz = 1
-        self.grad_clip = 1
-        self.num_layers = 1
-        self.dropout = 0
+        self.train_loader = train_loader
+        self.test_loader = test_loader
+        self.lr = lr
+        self.batch = batch
+        self.epochs = epochs
+        self.hidden_state_sz = hidden_state_sz
+        self.input_sz = input_sz
+        self.seq_sz = seq_sz
+        self.seq_predict_sz = seq_sz - 1
+        self.output_sz = output_sz
+        self.grad_clip = grad_clip
+        self.num_layers = num_layers
+        self.dropout = dropout
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.auto_encoder = AE(self.input_sz, self.hidden_state_sz, self.num_layers, self.dropout, self.seq_sz, self.output_sz)
-        optimizer = torch.optim.Adam
-        self.optimizer = optimizer(self.auto_encoder.parameters(), lr=self.lr)
+        self.AE = AE(self.input_sz, self.hidden_state_sz, self.num_layers, self.dropout, self.seq_sz,
+                     self.output_sz)
+        self.optimizer = optimizer(self.AE.parameters(), lr=self.lr)
+        self.AEP = AEP(self.input_sz, self.hidden_state_sz, self.num_layers, self.dropout, self.seq_predict_sz,
+                       self.output_sz)
+        self.optimizer_predict = optimizer(self.AEP.parameters(), lr=self.lr)
 
     def train(self):
-        amount_data = self.train_data.size(dim=0)
-        model = self.auto_encoder.to(self.device)
+        model = self.AE.to(self.device)
         criterion = torch.nn.MSELoss().to(self.device)
         lr_scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, 100, 0.5)
 
         train_loss = []
-        validation_loss = []
 
         for epoch in range(self.epochs):
-            rnd_ind = np.random.permutation(amount_data)
+            print(f'started epoch {epoch}')
 
             curr_loss = 0
-
-            for b in range(math.floor(amount_data / self.batch)):
-                ind = rnd_ind[b * self.batch: (b + 1) * self.batch]
-                train_ind = self.train_data[ind, :, :].to(self.device)
+            for b, train_ind in enumerate(self.train_loader):
+                train_ind = torch.flatten(train_ind, 0, 1).unsqueeze(2).to(self.device)
                 self.optimizer.zero_grad()
 
                 # forward pass
@@ -125,193 +85,191 @@ class AE_TOY:
 
                 # backward pass
                 loss.backward()
-                if self.grad_clip:
+                if grad_clip:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), self.grad_clip)
                 self.optimizer.step()
                 curr_loss += loss.item()
 
             lr_scheduler.step()
-            train_loss.append(curr_loss / math.floor(amount_data / self.batch))
+            train_loss.append(curr_loss / len(self.train_loader))
 
-            v_data = self.validation_data.to(self.device)
-            outputs = model(v_data)
-            validation_loss.append(criterion(outputs, v_data).item())
+        return train_loss
 
-        return train_loss, validation_loss
+    def train_predict(self):
+        model = self.AEP.to(self.device)
+        criterion = torch.nn.MSELoss().to(self.device)
+
+        total_loss = []
+        reconstruct_loss = []
+        predict_loss = []
+
+        for epoch in range(self.epochs):
+            print(f'started epoch {epoch}')
+
+            curr_total_loss = 0
+            curr_reconstruct_loss = 0
+            curr_predict_loss = 0
+            for b, train_ind in enumerate(self.train_loader):
+                train_ind = torch.flatten(train_ind, 0, 1).unsqueeze(2)
+                a = train_ind[:, :-1]
+                v = train_ind[:, 1:]
+                X = train_ind[:, :-1].to(self.device)
+                Y = train_ind[:, 1:].to(self.device)
+                self.optimizer_predict.zero_grad()
+
+                # forward pass
+                outputs, pred = model(X)
+                loss_reconstruct = criterion(outputs, X)
+                loss_predict = criterion(pred, Y.squeeze())
+
+                loss = (loss_reconstruct + loss_predict) / 2
+
+                # backward pass
+                loss.backward()
+                if grad_clip:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), self.grad_clip)
+                self.optimizer_predict.step()
+                curr_total_loss += loss.item()
+                curr_reconstruct_loss += loss_reconstruct.item()
+                curr_predict_loss += loss_predict.item()
+
+            divider = len(self.train_loader)
+            total_loss.append(curr_total_loss / divider)
+            reconstruct_loss.append(curr_reconstruct_loss / divider)
+            predict_loss.append(curr_predict_loss / divider)
+
+        return total_loss, reconstruct_loss, predict_loss
 
     def reconstruct(self, data):
-        return self.auto_encoder.to(self.device).forward(data.to(self.device))
+        data = torch.flatten(data, 0, 1).unsqueeze(2).to(self.device)
+        reconstruct = self.AE.to(self.device).forward(data.to(self.device))
+        return reconstruct.view(-1, 19, 53)
+
+    def reconstruct_predict(self, data):
+        data = torch.flatten(data, 0, 1).unsqueeze(2).to(self.device)
+        data = data[:, :-1].to(self.device)
+        reconstruct, predict = self.AEP.to(self.device).forward(data.to(self.device))
+        return predict.view(-1, 19, 52)
+
+    def plot(self):
+        train_loss = self.train()
+        x = np.arange(self.epochs)
+        plt.plot(x, train_loss, label="Train loss")
+        plt.legend()
+        plt.xlabel("Epochs")
+        plt.ylabel("Loss")
+        plt.title(
+            f'S&P 500 LSTM loss \n hidden state size = {self.hidden_state_sz}, learning rate = {self.lr}, gradient clipping = {self.grad_clip}')
+        plt.show()
+
+        amount_img = 3
+        test_images, reconstruction = self.get_reconstruct_and_test(amount_img, self.reconstruct)
+        test_images, reconstruction = self.revert_normalize_data(test_images, reconstruction)
+
+        for i in range(amount_img):
+            fig, axes = plt.subplots()
+            axes.xaxis.set_major_locator(MaxNLocator(5))
+            plt.plot(data_dict['dates'], test_images[i].flatten(), label='original')
+            plt.plot(data_dict['dates'], reconstruction[i].flatten(), label='reconstructed')
+            plt.title(f"Original vs Reconstructed, symbol={data_dict['test_name'][i][0]}")
+            plt.xlabel("Date")
+            plt.ylabel("High Rate")
+            plt.legend()
+            plt.show()
+
+    def plot_predict(self):
+        total_loss, reconstruct_loss, predict_loss = self.train_predict()
+        x = np.arange(self.epochs)
+        plt.plot(x, reconstruct_loss, label="Train reconstruct loss")
+        plt.plot(x, predict_loss, label="Train predict loss")
+        plt.legend()
+        plt.xlabel("Epochs")
+        plt.ylabel("Loss")
+        plt.title(
+            f'S&P 500 reconstruct loss vs predict loss \n hidden state size = {self.hidden_state_sz}, learning rate = {self.lr}, gradient clipping = {self.grad_clip}')
+        plt.show()
+        amount_img = 2
+        test_images, reconstruction = self.get_reconstruct_and_test(amount_img, self.reconstruct_predict)
+
+        test_images = torch.flatten(test_images, 0, 1).unsqueeze(2)
+        y = test_images[:, 1:].view(-1, 19, 52)
+        y, reconstruction = self.revert_normalize_data(y, reconstruction)
+        dates = data_dict['dates'].reshape(53, 19)[:-1].flatten()
+
+        for i in range(amount_img):
+            fig, axes = plt.subplots()
+            axes.xaxis.set_major_locator(MaxNLocator(5))
+            plt.plot(dates, y[i].flatten(), label='original')
+            plt.plot(dates, reconstruction[i].flatten(), label='predicted')
+            plt.title(f"Original vs predicted one step, symbol={data_dict['test_name'][i][0]}")
+            plt.xlabel("Date")
+            plt.ylabel("High Rate")
+            plt.legend()
+            plt.show()
+
+    def plot_multi_predict(self):
+        self.train_predict()
+
+        test_iter = iter(self.test_loader)
+        test_data = next(test_iter)
+        test_data = test_data[:, :-1]  # to make the amount of sub-sequence even
+        test_first_half = test_data[:, :int(test_data.shape[1] / 2)].squeeze()
+        test_second_half = test_data[:, int(test_data.shape[1] / 2):].squeeze()
+        predicted_second_half = self.auto_regression(test_first_half)
+        multi_predicted = torch.cat((test_first_half, predicted_second_half.view(101, 9, -1)), dim=1).detach().cpu().squeeze().numpy()
+
+        amount = 2
+
+        test_data = test_data[:amount].squeeze()
+        y, multi_predicted = self.revert_normalize_data(test_data, multi_predicted)
+        _, one_predict = self.get_reconstruct_and_test(amount, self.reconstruct_predict)
+        SNP_data.revert_normalize(one_predict, data_dict['test_mean'], data_dict['test_std'])
+
+        dates = data_dict['dates'].reshape(53, 19)[:-1, 9:-1].flatten()
+
+        for i in range(amount):
+            fig, axes = plt.subplots()
+            axes.xaxis.set_major_locator(MaxNLocator(6))
+            plt.plot(y[i][9:, :-1].flatten(), label='original')
+            plt.plot(multi_predicted[i][9:, :-1].flatten(), label='multi step predicted')
+            plt.plot(one_predict[i][9: -1].flatten(), label='one step predicted')
+            plt.title(f"Original vs predicted one step vs predicted multi step, symbol={data_dict['test_name'][i][0]}")
+            plt.xlabel("dayes")
+            plt.ylabel("High Rate")
+            plt.legend()
+            plt.show()
+
+    def get_reconstruct_and_test(self, amount_img, reconstruct_func):
+        test_iter = iter(self.test_loader)
+        test_images = next(test_iter)
+        test_images = test_images[:amount_img].squeeze()
+        reconstruction = reconstruct_func(test_images).detach().cpu().squeeze().numpy()
+        return test_images, reconstruction
+
+    def revert_normalize_data(self, test_images, reconstruction):
+        test_images = test_images.detach().cpu().squeeze().numpy()
+        SNP_data.revert_normalize(test_images, data_dict['test_mean'], data_dict['test_std'])
+        SNP_data.revert_normalize(reconstruction, data_dict['test_mean'], data_dict['test_std'])
+
+        return test_images, reconstruction
+
+    def auto_regression(self, data):
+        data_0, data_1, _ = data.shape
+        iter = data.shape[1] * data.shape[2]
+        model = self.AEP.to(self.device)
+        predicted_arr = torch.empty(data.shape[0], 1)
+        data = torch.flatten(data, 0, 1).unsqueeze(2)[:, :-1]
+        for i in range(iter):
+            _, predict = model.forward(data.to(self.device))
+            last_predicted = predict[:, -1:].unsqueeze(2).detach().cpu()
+            data = torch.cat((data[:, 1:], last_predicted[:, -1:]), dim=1)
+            predicted_arr = torch.cat(
+                (predicted_arr, predict.view(data_0, data_1, -1).flatten(1, 2)[:, -1].detach().cpu().unsqueeze(1)),
+                dim=1)
+        return predicted_arr[:, 1:].view(data_0, data_1, -1)
 
 
-# Data
-train, validation, test = create_synthetic_data()  # [num_of_data_point, sequence_len, features_dim]
-#lstm = AE_TOY()
-#lstm.train()
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-auto_encoder = AE(1, 30, 1, 0, 50, 1)
-optimizer = torch.optim.Adam
-optimizer = optimizer(auto_encoder.parameters(), lr=0.001)
-amount_data = train.size(dim=0)
-model = auto_encoder.to(device)
-criterion = torch.nn.MSELoss().to(device)
-lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 100, 0.5)
-
-train_loss = []
-validation_loss = []
-for epoch in range(100):
-    rnd_ind = np.random.permutation(amount_data)
-    grad_clip = 1
-    curr_loss = 0
-    batch = 100
-    for b in range(math.floor(amount_data / batch)):
-        ind = rnd_ind[b * batch: (b + 1) * batch]
-        train_ind = train[ind, :, :].to(device)
-        optimizer.zero_grad()
-
-        # forward pass
-        outputs = model(train_ind)
-        loss = criterion(outputs, train_ind)
-
-        # backward pass
-        loss.backward()
-        if grad_clip:
-            torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
-        optimizer.step()
-        curr_loss += loss.item()
-
-    lr_scheduler.step()
-    train_loss.append(curr_loss / math.floor(amount_data / batch))
-
-    v_data = validation.to(device)
-    outputs = model(v_data)
-    validation_loss.append(criterion(outputs, v_data).item())
-#out = auto_encoder.reconstruct(test)
-out = auto_encoder.to(device).forward(test.to(device))
-examples_indexes = torch.randint(0, test.size(0), (3,))
-examples_inputs = test[examples_indexes].squeeze(-1)   # [num_of_examples, sequence]
-examples_outputs = out[examples_indexes].squeeze(-1)  # [num_of_examples, sequence]
-
-for input_, output in zip(examples_inputs, examples_outputs):
-    input_ = input_.unsqueeze(0)  # Shape: [1(feature), sequence]
-    output = output.unsqueeze(0)  # Shape: [1(feature), sequence]
-    in_out = torch.cat((input_, output), dim=0)  # Shape: [2, sequence]
-    plot_signal_vs_time(in_out, 'Signal Value vs. Time \nInput vs.Output')
-
-# original signal and its reconstruction
-in_test, out_test = train_and_get_test_outputs(0.001, 1, 40, train, test, 20)
-# lr, grad_clip, hidden_units, train_data, test_data, epochs
-# Select three examples from the test and there outputs
-examples_indexes = torch.randint(0, test.size(0), (3,))
-examples_inputs = in_test[examples_indexes].squeeze(-1)   # [num_of_examples, sequence]
-examples_outputs = out_test[examples_indexes].squeeze(-1)  # [num_of_examples, sequence]
-
-for input_, output in zip(examples_inputs, examples_outputs):
-    input_ = input_.unsqueeze(0)  # Shape: [1(feature), sequence]
-    output = output.unsqueeze(0)  # Shape: [1(feature), sequence]
-    in_out = torch.cat((input_, output), dim=0)  # Shape: [2, sequence]
-    plot_signal_vs_time(in_out, 'Signal Value vs. Time \nInput vs.Output')
-    """
-"""
-def create_model(features_dim, hidden_units, sequence_len):
-    model = LSTMAutoencoder(features_dim, hidden_units, sequence_len)
-    return model
-
-
-def get_data_loaders(train_data, validation_or_test_data):
-    shuffle = True
-    train_loader = DataLoader(train_data, batch_size=256, shuffle=shuffle)
-    validation_or_test_loader = DataLoader(validation_or_test_data, batch_size=256, shuffle=shuffle)
-    return train_loader, validation_or_test_loader
-
-
-def train_model(model, train_loader, criterion, optimizer):
-    model.train()
-    for batch in train_loader:
-        # Forward pass
-        outs = model(batch)
-        loss = criterion(outs, batch)
-
-        # Backward and optimize
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-
-def test_model(model, data_loader):
-    model.eval()
-    total_out = []
-    total_in = []
-    for batch in data_loader:
-        with torch.no_grad():
-            total_in.append(batch)
-            outs = model(batch)  # (batch, sequence, features)
-            total_out.append(outs)
-    return torch.cat(total_in, dim=0), torch.cat(total_out, dim=0)
-
-
-def evaluate_model(model, data_loader, criterion):
-    avg_loss = None
-    model.eval()
-    for batch in data_loader:
-        with torch.no_grad():
-            outs = model(batch)
-            loss = criterion(outs, batch)
-            if avg_loss is None:
-                avg_loss = loss.item()
-            else:
-                avg_loss = (loss.item() + avg_loss) / 2
-    return avg_loss
-
-
-def check_model(lr, grad_clip, hidden_units, train_data, validation_data, epochs):
-    
-    Check the model's performance with given parameters
-    
-    sequence_len = train_data.shape[1]
-    features_dim = train_data.shape[2]
-
-    # Model
-    model = create_model(features_dim, hidden_units, sequence_len)
-
-    # Loss and Optimizer
-    criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=grad_clip)
-
-    # Data loader by batches
-    train_loader, validation_loader = get_data_loaders(train_data, validation_data)
-
-    min_loss, min_epoch = float('inf'), -1
-
-    for epoch in range(epochs):
-        train_model(model, train_loader, criterion, optimizer)
-        avg_loss = evaluate_model(model, validation_loader, criterion)
-
-        if avg_loss < min_loss:
-            min_loss = avg_loss
-            min_epoch = epoch
-
-    return min_loss, min_epoch
-
-
-def train_and_get_test_outputs(lr, grad_clip, hidden_units, train_data, test_data, epochs):
-    # train_data Shape:  [num_of_data_point, sequence_len, features_dim] = [10000, 50, 1]
-    # test_data Shape: [num_of_data_point, sequence_len, features_dim] = [2000, 50, 1]
-
-    sequence_len = train_data.shape[1]
-    features_dim = train_data.shape[2]
-
-    # Model
-    model = create_model(features_dim, hidden_units, sequence_len)
-
-    # Loss and Optimizer
-    criterion = nn.MSELoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=grad_clip)
-
-    # Data loader by batches
-    train_loader, test_loader = get_data_loaders(train_data, test_data)
-    for epoch in range(epochs):
-        train_model(model, train_loader, criterion, optimizer)
-    input_test, outs_test = test_model(model, test_loader)
-    return input_test, outs_test"""
-
-
+# daily_stock_AMZN_GOOGL()
+model = AE_SNP500()
+# model.plot()
+model.plot_predict()
