@@ -32,7 +32,7 @@ class data_normalization:
         self.orig_data = data
         self.orig_shape = data.shape
         self.reshaped_data, (self.batch, self.new_sequence, self.new_features) = reshape_seq_to_closest_factors(data)
-        print(f"{self.batch, self.new_sequence, self.new_features}")
+        # print(f"{self.batch, self.new_sequence, self.new_features}")
         self.normalized_data, self.mean, self.std = self.normalize_per_sequence()
         self.normalized_data = self.normalized_data.view(self.batch * self.new_sequence, self.new_features, 1)
         self.norm_shape_orig = self.normalized_data.view(self.orig_shape)
@@ -68,7 +68,7 @@ class data_normalization:
         return norm_shape_orig_last_seq, last_element
 
     def get_normalized_test_pred_multi(self, sliding_window):
-        norm_shape_orig_i_seq = self.norm_shape_orig[:, sliding_window: (sliding_window+self.new_features), :]
+        norm_shape_orig_i_seq = self.norm_shape_orig[:, (sliding_window-self.new_features): sliding_window, :]
         return norm_shape_orig_i_seq
 
     def denormalize_test_pred_one(self, data):

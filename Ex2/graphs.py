@@ -3,7 +3,7 @@ import numpy as np
 from torch import randint, cat
 
 
-def prepare_plot_in_vs_out(in_test, out_test, sample_size):
+def prepare_plot_in_vs_out(in_test, out_test, sample_size, title='Signal Value vs. Time \nInput vs.Output', time='Time', signal='Signal Value'):
     examples_indexes = randint(0, in_test.size(0), (sample_size,))
     examples_inputs = in_test[examples_indexes].squeeze(-1)  # [num_of_examples, sequence]
     examples_outputs = out_test[examples_indexes].squeeze(-1)  # [num_of_examples, sequence]
@@ -12,7 +12,7 @@ def prepare_plot_in_vs_out(in_test, out_test, sample_size):
         input_ = input_.unsqueeze(0)  # Shape: [1(feature), sequence]
         output_ = output_.unsqueeze(0)  # Shape: [1(feature), sequence]
         in_out = cat((input_, output_), dim=0)  # Shape: [2, sequence]
-        plot_signal_vs_time(in_out, 'Signal Value vs. Time \nInput vs.Output')
+        plot_signal_vs_time(in_out, title, time, signal)
 
 
 def plot_signal_vs_time(data_examples, title, time='Time', signal='Signal Value'):
