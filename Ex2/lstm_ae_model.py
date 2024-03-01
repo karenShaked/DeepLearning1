@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
 from lstm_ae_architecture import LSTMAutoencoder
+from random import randint
 
 
 def get_data_loader(data, batch, shuffle=True):
@@ -16,12 +17,12 @@ def get_dims_copy_task(data):
     return seq, input_features, output_features
 
 
-def data_for_predict(data, seq):
+def data_for_predict(data):
     # Extract the first part
-    before_xt = data[:, :seq, :]
+    before_xt = data[:, :-1, :]
 
     # Extract the second part
-    after_yt = data[:, 1:(seq+1), :]
+    after_yt = data[:, 1:, :]
     return before_xt, after_yt
 
 
@@ -32,7 +33,6 @@ class LSTM_model:
         self.lstm = LSTMAutoencoder(in_features, hidden_units, num_layers, dropout, sequence, out_features, pred)
         optimizer = torch.optim.Adam
         self.optimizer = optimizer(self.lstm.parameters(), lr=lr)
-        self.sequence = sequence
 
     def train(self, train_data, epochs, batch_len, validation=None):
         # train_data [num_of_data_point, sequence_len, features_dim]
@@ -88,7 +88,7 @@ class LSTM_model:
             curr_reconstruct_loss = 0
             curr_predict_loss = 0
             for batch in train_loader:
-                X, Y = data_for_predict(batch, self.sequence)
+                X, Y = data_for_predict(batch)
                 X.to(self.device)
                 Y.to(self.device)
                 self.optimizer.zero_grad()
@@ -118,7 +118,7 @@ class LSTM_model:
 
     def reconstruct_predict(self, data):
         data = data.to(self.device)
-        X, Y = data_for_predict(data, self.sequence)
+        X, Y = data_for_predict(data)
         data = X.to(self.device)
         reconstruct, predict = self.lstm.to(self.device).forward(data.to(self.device))
         return predict

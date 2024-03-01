@@ -272,4 +272,4 @@ class AE_SNP500:
 # daily_stock_AMZN_GOOGL()
 model = AE_SNP500()
 # model.plot()
-model.plot_predict()
+model.plot_multi_predict()

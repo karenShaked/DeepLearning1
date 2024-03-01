@@ -11,8 +11,6 @@ class Encoder(nn.Module):
 
     def forward(self, x):
         _, (ht, _) = self.lstm_encoder(x)
-        b = ht[self.num_layers - 1].view(-1, 1, self.hidden_units)
-        a = ht[-1]
         return ht[self.num_layers - 1].view(-1, 1, self.hidden_units)
 
 

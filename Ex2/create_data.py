@@ -79,7 +79,7 @@ def download_stock(stock_names):
     # Convert the clean DataFrame to a PyTorch tensor
     max_prices_tensor = torch.tensor(df_pivoted.values).float().t()
 
-    print(max_prices_tensor.shape)  # [num_of_companies, sequence_length]
+    # print(max_prices_tensor.shape)  [num_of_companies, sequence_length]
     return max_prices_tensor
 
 

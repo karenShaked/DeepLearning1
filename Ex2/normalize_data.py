@@ -30,19 +30,21 @@ def reshape_seq_to_closest_factors(tensor):
 class data_normalization:
     def __init__(self, data):
         self.orig_data = data
+        self.orig_shape = data.shape
         self.reshaped_data, (self.batch, self.new_sequence, self.new_features) = reshape_seq_to_closest_factors(data)
         print(f"{self.batch, self.new_sequence, self.new_features}")
         self.normalized_data, self.mean, self.std = self.normalize_per_sequence()
         self.normalized_data = self.normalized_data.view(self.batch * self.new_sequence, self.new_features, 1)
-
-    def get_normalized_data(self):
-        return self.normalized_data
+        self.norm_shape_orig = self.normalized_data.view(self.orig_shape)
 
     def get_calculation_shape(self):
         return self.batch, self.new_sequence, self.new_features
 
     def get_new_sequence(self):
         return self.new_sequence
+
+    def get_normalized_data(self):
+        return self.normalized_data
 
     def normalize_per_sequence(self):
         # Calculate the mean and std per sub-sequence for each batch
@@ -59,6 +61,27 @@ class data_normalization:
         self.normalized_data = (self.reshaped_data - self.mean) / self.std
 
         return self.normalized_data, self.mean, self.std
+
+    def get_normalized_test_pred_one(self):
+        norm_shape_orig_last_seq = self.norm_shape_orig[:, -self.new_features:, :]
+        last_element = self.orig_data[:, -1:, :].squeeze(2)
+        return norm_shape_orig_last_seq, last_element
+
+    def get_normalized_test_pred_multi(self, sliding_window):
+        norm_shape_orig_i_seq = self.norm_shape_orig[:, sliding_window: (sliding_window+self.new_features), :]
+        return norm_shape_orig_i_seq
+
+    def denormalize_test_pred_one(self, data):
+        data = data.view(self.batch, 1, (self.new_features - 1))
+        predict_last = data[:, :, -1]
+        orig_seq = self.orig_shape[1]
+        for i in range(self.batch):
+            self.norm_shape_orig[i, orig_seq-1, 0] = predict_last[i, 0]
+        data = self.norm_shape_orig.view(self.batch, self.new_sequence, self.new_features)
+        denormalized_data_reshaped = (data * self.std) + self.mean
+        denormalized_test = denormalized_data_reshaped.view(self.batch, self.new_sequence * self.new_features, 1)
+        predict_last_denormalized = denormalized_test[:, -1:, :].squeeze(2)
+        return denormalized_test, predict_last_denormalized
 
     def denormalize_data(self, data):
         # reshape data to subsequences
