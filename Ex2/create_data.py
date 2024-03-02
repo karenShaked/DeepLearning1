@@ -33,6 +33,7 @@ def download_mnist_pixels():
     print(images.shape)   # [num_of_images, num_of_pixels]
     return images
 
+
 def split_train_test(data):
     test_size = data.shape[0] // 5
     # Generate random indices for validation set
@@ -95,16 +96,4 @@ def create_synthetic_data():
     test_data = synthetic_tensor[8000:]  # Last 2000 for testing
     return train_data, validation_data, test_data
 
-
-def create_synthetic_data2():
-    synthetic_tensor = torch.rand(477, 1007) * 400
-    for data in synthetic_tensor:
-        random_int = random.randint(500, 600)
-        data[random_int - 400: random_int + 400] *= 0.001
-    synthetic_tensor = synthetic_tensor.unsqueeze(-1)  # Add a dimension for LSTM input
-    print(synthetic_tensor.shape)  # [num_of_data_point, sequence_len, features_dim]
-    train_data = synthetic_tensor[:382]  # First 6000 for training
-    validation_data = synthetic_tensor[382:477]  # Next 2000 for validation
-    test_data = synthetic_tensor[382:]  # Last 2000 for testing
-    return train_data, validation_data, test_data
 

@@ -1,5 +1,5 @@
 import torch
-from create_data import create_synthetic_data, create_synthetic_data2
+from create_data import create_synthetic_data
 import numpy as np
 from graphs import plot_grid_search, plot_signal_vs_time, prepare_plot_in_vs_out
 from lstm_ae_model import LSTM_model, get_dims_copy_task
@@ -20,6 +20,7 @@ def grid_search(lr_arr, grad_clip_arr, hidden_units_arr, train_data, validation_
             for hidden_units in hidden_units_arr:
                 model = LSTM_model(lr, input_features, hidden_units, output_features, seq, NUM_LAYERS, DROPOUT,
                                    grad_clip=grad_clip)
+                print(f"training model with lr: {lr}, grad_clip: {grad_clip}, hidden_units: {hidden_units} ")
                 train_loss, validation_loss = model.train(train_data, EPOCHS, BATCH, validation_data)
                 min_params_loss = min(validation_loss)
                 if min_loss > min_params_loss:
@@ -59,12 +60,7 @@ print(f'THE BEST MODEL PARAMS ARE :::::::::\n'
 # plot input vs. reconstruct
 best_model = LSTM_model(lr, in_features, hidden_unit, out_features, sequence, NUM_LAYERS, DROPOUT, grad_clip=gc)
 
-"""
-sequence, in_features, out_features = get_dims_copy_task(test)
-best_model = LSTM_model(0.01, in_features, 32, out_features, sequence, num_layers=NUM_LAYERS, dropout=DROPOUT, grad_clip=1, normalize=True)
-"""
-
-best_model.train(train, EPOCHS, BATCH, validation)
+best_model.train(train, epochs, BATCH, validation)
 output = best_model.reconstruct(test)
 prepare_plot_in_vs_out(test, output, sample_size=3)
 

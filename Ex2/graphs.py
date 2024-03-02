@@ -76,16 +76,3 @@ def plot_group_arrays_one_graph(arr_label_lst, title, x_label, y_label):
     plt.legend()
     plt.show()
 
-
-def prepare_plot_in_vs_out_pred(before_in_test, after_in_test, out_test, sample_size):
-    examples_indexes = randint(0, before_in_test.size(0), (sample_size,))
-    examples_inputs_before = before_in_test[examples_indexes].squeeze(-1)  # [num_of_examples, sequence]
-    examples_inputs_after = after_in_test[examples_indexes].squeeze(-1)  # [num_of_examples, sequence]
-    examples_outputs = out_test[examples_indexes].squeeze(-1)  # [num_of_examples, sequence]
-
-    for input_before, input_after, output_ in zip(examples_inputs_before, examples_inputs_after, examples_outputs):
-        input_before = input_before.unsqueeze(0)  # Shape: [1(feature), sequence]
-        input_after = input_after.unsqueeze(0)  # Shape: [1(feature), sequence]
-        output_ = output_.unsqueeze(0)  # Shape: [1(feature), sequence]
-        in_out = cat((input_before, input_after, output_), dim=0)  # Shape: [3, sequence]
-        plot_signal_vs_time(in_out, 'Signal Value vs. Time \nInput before predict & Input after predict vs. Output')

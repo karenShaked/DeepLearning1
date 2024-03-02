@@ -82,7 +82,7 @@ def reconstruct_model():
     out_test = norm_test.denormalize_data(out_test)
 
     # Plot some examples of the results
-    prepare_plot_in_vs_out(test, out_test, sample_size=3, title='Reconstruct Model 3.3.2 \nInput vs.Output', time='Epochs', signal='Stock Price')
+    prepare_plot_in_vs_out(test, out_test, sample_size=3, title='Reconstruct Model 3.3.2 \nInput vs.Output', time='Time', signal='Stock Price')
 
 
 def predict_model():
@@ -109,7 +109,7 @@ def predict_model():
     out_test, predict_last = norm_test.denormalize_test_pred_one(out_test)
     distance = abs(predict_last - orig_last).squeeze(1)
     print(f"The mean error of predict denormalized: {distance.mean()}")
-    prepare_plot_in_vs_out(test, out_test, sample_size=3, title='Predict One Model 3.3.3 \nInput vs.Output', time='Epochs', signal='Stock Price')
+    prepare_plot_in_vs_out(test, out_test, sample_size=3, title='Predict One Model 3.3.3 \nInput vs.Output', time='Time', signal='Stock Price')
 
 
 def multi_step_predict_model():
@@ -138,7 +138,7 @@ def multi_step_predict_model():
     orig_half_pred = torch.cat((test[:, :(orig_seq//2)+100, :], all_pred), dim=1)
     orig_pred_denorm = norm_test.denormalize_data(orig_half_pred)
     out_mult_pred = torch.cat((test[:, :(orig_seq//2)+100, :], orig_pred_denorm[:, (orig_seq//2)+100:, :]), dim=1)
-    prepare_plot_in_vs_out(test, out_mult_pred, sample_size=3, title='Multi-Predict Model 3.3.4 \nInput vs.Output', time='Epochs', signal='Stock Price')
+    prepare_plot_in_vs_out(test, out_mult_pred, sample_size=3, title='Multi-Predict Model 3.3.4 \nInput vs.Output', time='Time', signal='Stock Price')
 
 
 # 3.3.1  graphs of the daily max value for the stocks AMZN and GOOGL
