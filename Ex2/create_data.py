@@ -15,9 +15,9 @@ def download_mnist_rows():
     dataiter = iter(trainloader)
     images, labels = next(dataiter)
 
-    print(images.shape)
+    # print(images.shape)
     # Return images tensor with dimensions [num_of_images, num_of_rows, num_of_columns]
-    return images
+    return images, labels
 
 
 def download_mnist_pixels():
@@ -30,8 +30,8 @@ def download_mnist_pixels():
 
     dataiter = iter(trainloader)
     images, labels = next(dataiter)
-    print(images.shape)   # [num_of_images, num_of_pixels]
-    return images
+    # print(images.shape)   # [num_of_images, num_of_pixels]
+    return images.unsqueeze(1).unsqueeze(3), labels
 
 
 def split_train_test(data):
